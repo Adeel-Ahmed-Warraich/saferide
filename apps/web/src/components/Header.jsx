@@ -71,7 +71,8 @@ const Header = () => {
               <div className="text-lg font-extrabold text-[#1E40AF] leading-tight tracking-tight">
                 Safe<span className="text-[#FBBF24]">Ride</span>
               </div>
-              <div className="text-xs text-gray-500 font-medium -mt-0.5">School Transport</div>
+              <div className="text-xs text-gray-500 font-medium -mt-0.5">School Transport</div>              
+              <div className="text-xs text-gray-500 font-medium -mt-0.5 italic">Your Child's Safety, Our Priority</div>
             </div>
           </Link>
 
