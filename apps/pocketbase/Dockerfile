@@ -12,8 +12,12 @@ RUN wget https://github.com/pocketbase/pocketbase/releases/download/v0.28.2/pock
 # Copy migrations
 COPY pb_migrations /pb_migrations
 
+# Copy startup script
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
+
 # Expose port
 EXPOSE 8090
 
-# Start PocketBase
-CMD ["./pocketbase", "serve", "--http=0.0.0.0:8090", "--dir=/pb_data", "--migrationsDir=/pb_migrations"]
+# Run startup script
+CMD ["/start.sh"]
