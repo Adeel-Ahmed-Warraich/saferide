@@ -1,3 +1,4 @@
 node_modules
 /apps/pocketbase/pb_data
 apps/pocketbase/pb_data/
+apps/web/dist/
