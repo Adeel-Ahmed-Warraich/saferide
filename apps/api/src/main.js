@@ -14,10 +14,12 @@ const PB_PORT = 17549;
 try { chmodSync(PB_BINARY, '755'); } catch (e) {}
 
 // Start PocketBase on internal port
+const PB_DATA_DIR = process.env.PB_DATA_DIR || join(ROOT, 'pb_data');
+
 const pb = spawn(PB_BINARY, [
   'serve',
   `--http=127.0.0.1:${PB_PORT}`,
-  `--dir=${join(ROOT, 'pb_data')}`,
+  `--dir=${PB_DATA_DIR}`,
   `--migrationsDir=${join(ROOT, 'pb_migrations')}`,
 ], { stdio: 'inherit', cwd: ROOT });
 
