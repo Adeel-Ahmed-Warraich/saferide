@@ -21,6 +21,7 @@ const pb = spawn(PB_BINARY, [
   `--http=127.0.0.1:${PB_PORT}`,
   `--dir=${PB_DATA_DIR}`,
   `--migrationsDir=${join(ROOT, 'pb_migrations')}`,
+  '--origins=https://saferide.com.pk,http://localhost:3000,http://127.0.0.1:3000',
 ], { stdio: 'inherit', cwd: ROOT });
 
 pb.on('error', (err) => { console.error('PocketBase error:', err); });
