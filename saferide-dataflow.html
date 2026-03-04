@@ -1,665 +1,644 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>SafeRide – System Data Flow Diagram</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SafeRide — Project Analysis & Data Flow</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #1e293b; }
+  body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+  
+  .header { background: linear-gradient(135deg, #1e3a5f, #1a56db); padding: 32px 40px; border-bottom: 1px solid #1e40af; }
+  .header h1 { font-size: 28px; font-weight: 800; color: #fff; }
+  .header p { color: #93c5fd; margin-top: 6px; font-size: 14px; }
+  
+  .tabs { display: flex; gap: 4px; padding: 20px 40px 0; background: #0f172a; border-bottom: 1px solid #1e293b; overflow-x: auto; }
+  .tab { padding: 10px 20px; border-radius: 8px 8px 0 0; cursor: pointer; font-size: 13px; font-weight: 600; color: #64748b; border: 1px solid transparent; border-bottom: none; white-space: nowrap; transition: all 0.2s; }
+  .tab.active { background: #1e293b; color: #60a5fa; border-color: #334155; }
+  .tab:hover:not(.active) { color: #94a3b8; }
+  
+  .content { padding: 32px 40px; display: none; }
+  .content.active { display: block; }
 
-  /* ── Header ── */
-  .page-header { background: linear-gradient(135deg, #1e3a8a, #1d4ed8); color: white; padding: 28px 40px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
-  .page-header h1 { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.5px; }
-  .page-header p { font-size: 0.85rem; color: #bfdbfe; margin-top: 4px; }
-  .legend { display: flex; gap: 16px; flex-wrap: wrap; }
-  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; }
-  .legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+  /* ── DATA FLOW ── */
+  .flow-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+  .flow-col h3 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 8px 12px; border-radius: 8px 8px 0 0; text-align: center; }
+  .col-user h3 { background: #7c3aed; color: #ede9fe; }
+  .col-frontend h3 { background: #1d4ed8; color: #dbeafe; }
+  .col-backend h3 { background: #065f46; color: #d1fae5; }
+  .col-db h3 { background: #92400e; color: #fef3c7; }
+  
+  .node { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 12px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; }
+  .node:hover { border-color: #60a5fa; transform: translateY(-1px); }
+  .node.selected { border-color: #60a5fa; background: #1e3a5f; }
+  .node-title { font-size: 13px; font-weight: 600; color: #e2e8f0; }
+  .node-sub { font-size: 11px; color: #64748b; margin-top: 3px; }
+  .badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px; margin-top: 5px; }
+  .badge-ok { background: #064e3b; color: #6ee7b7; }
+  .badge-warn { background: #78350f; color: #fcd34d; }
+  .badge-error { background: #7f1d1d; color: #fca5a5; }
+  .badge-info { background: #1e3a5f; color: #93c5fd; }
 
-  /* ── Tabs ── */
-  .tabs { display: flex; gap: 4px; padding: 16px 40px 0; background: #1e3a8a; }
-  .tab { padding: 10px 20px; border-radius: 8px 8px 0 0; cursor: pointer; font-size: 0.82rem; font-weight: 600; color: #93c5fd; border: none; background: transparent; transition: all 0.2s; }
-  .tab:hover { background: rgba(255,255,255,0.1); color: white; }
-  .tab.active { background: #f0f4f8; color: #1e3a8a; }
+  .detail-panel { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; margin-top: 16px; min-height: 80px; }
+  .detail-panel h4 { color: #60a5fa; font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+  .detail-panel p { color: #94a3b8; font-size: 13px; line-height: 1.6; }
+  .detail-panel code { background: #0f172a; color: #86efac; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
 
-  /* ── Main ── */
-  .main { padding: 32px 40px; max-width: 1400px; margin: 0 auto; }
+  /* ── CLEANUP ── */
+  .cleanup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .cleanup-card { background: #1e293b; border-radius: 12px; padding: 20px; border: 1px solid #334155; }
+  .cleanup-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; gap-8px; }
+  .cleanup-card.delete h3 { color: #f87171; }
+  .cleanup-card.fix h3 { color: #fbbf24; }
+  .cleanup-card.keep h3 { color: #34d399; }
+  .cleanup-card.optimize h3 { color: #60a5fa; }
+  .item { padding: 10px; background: #0f172a; border-radius: 8px; margin-bottom: 8px; }
+  .item-title { font-size: 13px; font-weight: 600; color: #e2e8f0; }
+  .item-desc { font-size: 12px; color: #64748b; margin-top: 3px; }
+  .item-action { font-size: 11px; color: #f59e0b; margin-top: 4px; font-family: monospace; }
 
-  /* ── Flow Diagram ── */
-  .flow-grid { display: grid; grid-template-columns: 1fr 40px 1fr 40px 1fr 40px 1fr; gap: 0; align-items: start; margin-bottom: 40px; }
-  .flow-column { display: flex; flex-direction: column; gap: 12px; }
-  .flow-column-title { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #64748b; text-align: center; margin-bottom: 8px; padding: 6px; background: white; border-radius: 6px; border: 1px solid #e2e8f0; }
-  .arrow-col { display: flex; align-items: center; justify-content: center; padding-top: 40px; }
-  .arrow { font-size: 1.4rem; color: #94a3b8; }
+  /* ── FEATURES ── */
+  .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .feature-card { background: #1e293b; border-radius: 12px; padding: 20px; border: 1px solid #334155; transition: all 0.2s; }
+  .feature-card:hover { border-color: #60a5fa; }
+  .feature-card .icon { font-size: 28px; margin-bottom: 10px; }
+  .feature-card h3 { font-size: 14px; font-weight: 700; color: #e2e8f0; margin-bottom: 6px; }
+  .feature-card p { font-size: 12px; color: #64748b; line-height: 1.5; }
+  .feature-card .effort { font-size: 11px; font-weight: 600; margin-top: 10px; padding: 3px 8px; border-radius: 20px; display: inline-block; }
+  .effort-easy { background: #064e3b; color: #6ee7b7; }
+  .effort-medium { background: #78350f; color: #fcd34d; }
+  .effort-hard { background: #1e3a5f; color: #93c5fd; }
 
-  /* ── Node Cards ── */
-  .node { border-radius: 12px; padding: 14px 16px; border: 2px solid transparent; cursor: pointer; transition: all 0.2s; position: relative; }
-  .node:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
-  .node.active-node { box-shadow: 0 0 0 3px #3b82f6, 0 8px 24px rgba(59,130,246,0.2); }
-  .node-icon { font-size: 1.4rem; margin-bottom: 6px; }
-  .node-title { font-size: 0.82rem; font-weight: 700; margin-bottom: 3px; }
-  .node-desc { font-size: 0.72rem; line-height: 1.4; opacity: 0.8; }
-  .node-badge { display: inline-block; font-size: 0.62rem; font-weight: 700; padding: 2px 7px; border-radius: 20px; margin-top: 6px; }
+  /* ── STATUS ── */
+  .status-table { width: 100%; border-collapse: collapse; }
+  .status-table th { text-align: left; padding: 10px 14px; background: #1e293b; font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+  .status-table td { padding: 10px 14px; border-bottom: 1px solid #1e293b; font-size: 13px; }
+  .status-table tr:hover td { background: #1e293b44; }
 
-  /* ── Colors ── */
-  .node-frontend  { background: #eff6ff; border-color: #bfdbfe; color: #1e3a8a; }
-  .node-backend   { background: #f0fdf4; border-color: #bbf7d0; color: #14532d; }
-  .node-db        { background: #faf5ff; border-color: #e9d5ff; color: #4c1d95; }
-  .node-external  { background: #fff7ed; border-color: #fed7aa; color: #7c2d12; }
-  .node-mock      { background: #fefce8; border-color: #fde68a; color: #713f12; }
-  .node-user      { background: #f0f9ff; border-color: #bae6fd; color: #0c4a6e; }
+  .arrow { color: #334155; font-size: 20px; display: flex; align-items: center; justify-content: center; padding-top: 40px; }
 
-  .badge-live   { background: #dcfce7; color: #15803d; }
-  .badge-mock   { background: #fef9c3; color: #a16207; }
-  .badge-ready  { background: #dbeafe; color: #1d4ed8; }
-  .badge-needed { background: #fee2e2; color: #b91c1c; }
-
-  /* ── Detail Panel ── */
-  .detail-panel { background: white; border-radius: 16px; padding: 28px; border: 1px solid #e2e8f0; box-shadow: 0 4px 16px rgba(0,0,0,0.06); margin-bottom: 32px; min-height: 160px; }
-  .detail-panel h2 { font-size: 1.1rem; font-weight: 800; color: #1e3a8a; margin-bottom: 8px; }
-  .detail-panel p { font-size: 0.85rem; color: #475569; line-height: 1.6; margin-bottom: 12px; }
-  .detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 16px; }
-  .detail-item { background: #f8fafc; border-radius: 10px; padding: 12px 14px; border: 1px solid #e2e8f0; }
-  .detail-item-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; margin-bottom: 4px; }
-  .detail-item-value { font-size: 0.82rem; font-weight: 600; color: #1e293b; }
-  .status-pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; }
-
-  /* ── Feature Status Table ── */
-  .status-table { width: 100%; border-collapse: collapse; background: white; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; }
-  .status-table th { background: #1e3a8a; color: white; padding: 14px 16px; text-align: left; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
-  .status-table td { padding: 14px 16px; border-bottom: 1px solid #f1f5f9; font-size: 0.82rem; vertical-align: top; }
-  .status-table tr:last-child td { border-bottom: none; }
-  .status-table tr:hover td { background: #f8fafc; }
-  .feature-name { font-weight: 700; color: #1e293b; }
-  .feature-desc { color: #64748b; font-size: 0.75rem; margin-top: 2px; }
-
-  /* ── Mock Guide ── */
-  .guide-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-  .guide-card { background: white; border-radius: 16px; padding: 24px; border: 1px solid #e2e8f0; }
-  .guide-card h3 { font-size: 0.95rem; font-weight: 800; color: #1e3a8a; margin-bottom: 12px; display: flex; align-items: center; gap-8px; gap: 8px; }
-  .guide-card p, .guide-card li { font-size: 0.82rem; color: #475569; line-height: 1.7; }
-  .guide-card ul { padding-left: 18px; }
-  .code-block { background: #1e293b; color: #e2e8f0; border-radius: 10px; padding: 16px; font-family: 'Courier New', monospace; font-size: 0.78rem; margin-top: 12px; line-height: 1.7; overflow-x: auto; }
-  .code-comment { color: #64748b; }
-  .code-key { color: #93c5fd; }
-  .code-val-true { color: #4ade80; }
-  .code-val-false { color: #f87171; }
-  .code-str { color: #fde68a; }
-
-  /* ── Section heading ── */
-  .section-heading { font-size: 1rem; font-weight: 800; color: #1e3a8a; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
-  .section-heading::after { content: ''; flex: 1; height: 2px; background: #e2e8f0; border-radius: 2px; }
-
-  /* ── Responsive ── */
-  @media (max-width: 900px) {
-    .main { padding: 20px; }
-    .flow-grid { grid-template-columns: 1fr; }
-    .arrow-col { display: none; }
-    .guide-grid { grid-template-columns: 1fr; }
-    .tabs { padding: 12px 20px 0; }
-    .page-header { padding: 20px; }
+  @media (max-width: 768px) {
+    .flow-grid, .cleanup-grid, .features-grid { grid-template-columns: 1fr; }
+    .content, .tabs { padding-left: 16px; padding-right: 16px; }
+    .header { padding: 20px 16px; }
   }
 </style>
 </head>
 <body>
 
-<div class="page-header">
-  <div>
-    <h1>🚌 SafeRide — System Data Flow Diagram</h1>
-    <p>Complete architecture map · Feature status · Mock data guide</p>
-  </div>
-  <div class="legend">
-    <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div> Frontend</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div> Backend</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#a855f7"></div> Database</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#f97316"></div> External API</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#eab308"></div> Mock / Demo</div>
-  </div>
+<div class="header">
+  <h1>🚌 SafeRide — Project Analysis Dashboard</h1>
+  <p>Complete code review · Data flow · Cleanup guide · Feature suggestions · saferide.com.pk</p>
 </div>
 
 <div class="tabs">
-  <button class="tab active" onclick="showTab('flow')">📊 Data Flow</button>
-  <button class="tab" onclick="showTab('status')">✅ Feature Status</button>
-  <button class="tab" onclick="showTab('mock')">🧪 Mock Guide</button>
+  <div class="tab active" onclick="showTab('flow')">📊 Data Flow</div>
+  <div class="tab" onclick="showTab('cleanup')">🧹 Cleanup Guide</div>
+  <div class="tab" onclick="showTab('status')">✅ Feature Status</div>
+  <div class="tab" onclick="showTab('features')">💡 Suggested Features</div>
+  <div class="tab" onclick="showTab('deployment')">🚀 Deployment</div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════════════════════ -->
-<!--  TAB 1: DATA FLOW                                                         -->
-<!-- ══════════════════════════════════════════════════════════════════════════ -->
-<div id="tab-flow" class="main">
+<!-- ── TAB 1: DATA FLOW ── -->
+<div id="tab-flow" class="content active">
+  <p style="color:#64748b; font-size:13px; margin-bottom:20px;">Click any node to see details about that component.</p>
+  
+  <div class="flow-grid">
+    <!-- Users -->
+    <div class="col-user">
+      <h3>👤 Users</h3>
+      <div class="node" onclick="showDetail('visitor')">
+        <div class="node-title">Visitor</div>
+        <div class="node-sub">Public pages, booking form</div>
+        <span class="badge badge-ok">No login needed</span>
+      </div>
+      <div class="node" onclick="showDetail('parent')">
+        <div class="node-title">Parent</div>
+        <div class="node-sub">Dashboard, payments, tracking</div>
+        <span class="badge badge-ok">parents collection</span>
+      </div>
+      <div class="node" onclick="showDetail('admin')">
+        <div class="node-title">Admin</div>
+        <div class="node-sub">Full management access</div>
+        <span class="badge badge-ok">admins collection</span>
+      </div>
+    </div>
+
+    <!-- Frontend -->
+    <div class="col-frontend">
+      <h3>⚛️ Frontend (React)</h3>
+      <div class="node" onclick="showDetail('public-pages')">
+        <div class="node-title">Public Pages</div>
+        <div class="node-sub">Home, About, Services, Contact, Book</div>
+        <span class="badge badge-ok">✓ Working</span>
+      </div>
+      <div class="node" onclick="showDetail('auth-pages')">
+        <div class="node-title">Auth Pages</div>
+        <div class="node-sub">Parent login, Admin login, Reset</div>
+        <span class="badge badge-ok">✓ Working</span>
+      </div>
+      <div class="node" onclick="showDetail('parent-portal')">
+        <div class="node-title">Parent Portal</div>
+        <div class="node-sub">Dashboard, Payments, Notifications, Tracking</div>
+        <span class="badge badge-ok">✓ Working</span>
+      </div>
+      <div class="node" onclick="showDetail('admin-portal')">
+        <div class="node-title">Admin Dashboard</div>
+        <div class="node-sub">Enrollments, Parents, Payments, Vans, Reports</div>
+        <span class="badge badge-ok">✓ Working</span>
+      </div>
+      <div class="node" onclick="showDetail('accounting')">
+        <div class="node-title">Accounting</div>
+        <div class="node-sub">Income records, Vehicle expenses, P&L</div>
+        <span class="badge badge-ok">✓ Working</span>
+      </div>
+      <div class="node" onclick="showDetail('chatbot')">
+        <div class="node-title">AI Chatbot</div>
+        <div class="node-sub">Claude-powered customer support widget</div>
+        <span class="badge badge-warn">⚠ Needs API Key</span>
+      </div>
+    </div>
+
+    <!-- Backend -->
+    <div class="col-backend">
+      <h3>⚙️ Backend (PocketBase)</h3>
+      <div class="node" onclick="showDetail('pb-auth')">
+        <div class="node-title">Auth System</div>
+        <div class="node-sub">parents + admins collections</div>
+        <span class="badge badge-ok">✓ Live</span>
+      </div>
+      <div class="node" onclick="showDetail('pb-api')">
+        <div class="node-title">REST API</div>
+        <div class="node-sub">Auto-generated CRUD endpoints</div>
+        <span class="badge badge-ok">✓ Live</span>
+      </div>
+      <div class="node" onclick="showDetail('pb-hooks')">
+        <div class="node-title">PB Hooks</div>
+        <div class="node-sub">enrollment-notification, builder-mailer</div>
+        <span class="badge badge-warn">⚠ Needs SMTP</span>
+      </div>
+      <div class="node" onclick="showDetail('pb-migrations')">
+        <div class="node-title">Migrations</div>
+        <div class="node-sub">24 migration files</div>
+        <span class="badge badge-warn">⚠ Has duplicates</span>
+      </div>
+      <div class="node" onclick="showDetail('express-proxy')">
+        <div class="node-title">Express Proxy</div>
+        <div class="node-sub">Node.js wrapper for Hostinger Passenger</div>
+        <span class="badge badge-ok">✓ Live</span>
+      </div>
+    </div>
+
+    <!-- Database -->
+    <div class="col-db">
+      <h3>🗄️ Database & External</h3>
+      <div class="node" onclick="showDetail('db-parents')">
+        <div class="node-title">parents</div>
+        <div class="node-sub">Auth + profile data</div>
+        <span class="badge badge-ok">✓ Active</span>
+      </div>
+      <div class="node" onclick="showDetail('db-enrollments')">
+        <div class="node-title">enrollments</div>
+        <div class="node-sub">Booking form submissions</div>
+        <span class="badge badge-ok">✓ Active</span>
+      </div>
+      <div class="node" onclick="showDetail('db-payments')">
+        <div class="node-title">payments</div>
+        <div class="node-sub">Fee payment records</div>
+        <span class="badge badge-ok">✓ Active</span>
+      </div>
+      <div class="node" onclick="showDetail('db-vans')">
+        <div class="node-title">vans</div>
+        <div class="node-sub">Fleet management</div>
+        <span class="badge badge-ok">✓ Active</span>
+      </div>
+      <div class="node" onclick="showDetail('db-gps')">
+        <div class="node-title">gpsLocations</div>
+        <div class="node-sub">Real-time van coordinates</div>
+        <span class="badge badge-error">⛔ No Hardware</span>
+      </div>
+      <div class="node" onclick="showDetail('db-accounting')">
+        <div class="node-title">income_records + vehicle_expenses</div>
+        <div class="node-sub">Accounting collections</div>
+        <span class="badge badge-ok">✓ Active</span>
+      </div>
+      <div class="node" onclick="showDetail('ext-smtp')">
+        <div class="node-title">SMTP Email</div>
+        <div class="node-sub">Gmail / SendGrid for notifications</div>
+        <span class="badge badge-error">⛔ Not Configured</span>
+      </div>
+    </div>
+  </div>
 
   <div class="detail-panel" id="detail-panel">
-    <h2>👆 Click any node to see its details</h2>
-    <p>This diagram shows how data moves through the SafeRide system — from the user's browser through the frontend, to PocketBase backend, to the database collections and external services.</p>
+    <h4>Click any node above to see details</h4>
+    <p>Each node shows its current status, what it does, and what's needed to fully enable it.</p>
   </div>
+</div>
 
-  <div class="flow-grid">
-    <!-- Column 1: Users -->
-    <div class="flow-column">
-      <div class="flow-column-title">👥 Users</div>
-      <div class="node node-user" onclick="showDetail('parent')">
-        <div class="node-icon">👨‍👩‍👧</div>
-        <div class="node-title">Parent</div>
-        <div class="node-desc">Registers, tracks van, pays fees, views notifications</div>
-        <span class="node-badge badge-live">Real User</span>
+<!-- ── TAB 2: CLEANUP ── -->
+<div id="tab-cleanup" class="content">
+  <div class="cleanup-grid">
+    <div class="cleanup-card delete">
+      <h3>🗑️ Delete These Files</h3>
+      <div class="item">
+        <div class="item-title">apps/web/src/lib/apiServerClient.js</div>
+        <div class="item-desc">Horizons platform leftover — points to /hcgi/api which doesn't exist. Never used in any component.</div>
+        <div class="item-action">rm apps/web/src/lib/apiServerClient.js</div>
       </div>
-      <div class="node node-user" onclick="showDetail('admin')">
-        <div class="node-icon">🔐</div>
-        <div class="node-title">Admin</div>
-        <div class="node-desc">Manages parents, approves payments, sends notifications</div>
-        <span class="node-badge badge-live">Real User</span>
+      <div class="item">
+        <div class="item-title">apps/web/src/pages/ParentSignupPage.jsx</div>
+        <div class="item-desc">Never imported in App.jsx or any route. Signup flow goes through BookingPage instead.</div>
+        <div class="item-action">rm apps/web/src/pages/ParentSignupPage.jsx</div>
       </div>
-      <div class="node node-user" onclick="showDetail('visitor')">
-        <div class="node-icon">🌐</div>
-        <div class="node-title">Visitor</div>
-        <div class="node-desc">Browses public pages, submits booking/contact forms</div>
-        <span class="node-badge badge-live">Real User</span>
+      <div class="item">
+        <div class="item-title">apps/web/src/pages/LoginPage.jsx</div>
+        <div class="item-desc">Replaced by ParentLoginPage.jsx and AdminLoginPage.jsx. Not imported anywhere.</div>
+        <div class="item-action">rm apps/web/src/pages/LoginPage.jsx</div>
+      </div>
+      <div class="item">
+        <div class="item-title">apps/web/plugins/ (entire folder)</div>
+        <div class="item-desc">Horizons visual editor plugins — selection-mode, visual-editor, iframe-restoration, pocketbase-auth. All disabled in vite.config.js. Zero use locally.</div>
+        <div class="item-action">rm -rf apps/web/plugins/</div>
+      </div>
+      <div class="item">
+        <div class="item-title">apps/web/src/lib/mockData.js</div>
+        <div class="item-desc">DEMO_MODE = false and backend is live. This file is no longer needed.</div>
+        <div class="item-action">rm apps/web/src/lib/mockData.js</div>
+      </div>
+      <div class="item">
+        <div class="item-title">apps/web/dist/ folder</div>
+        <div class="item-desc">Build output should never be committed to git. Add to .gitignore.</div>
+        <div class="item-action">echo "apps/web/dist" >> .gitignore</div>
+      </div>
+      <div class="item">
+        <div class="item-title">apps/pocketbase/ folder (entire)</div>
+        <div class="item-desc">Duplicate of apps/api — all migrations and binary now live in apps/api. Having both causes confusion.</div>
+        <div class="item-action">rm -rf apps/pocketbase/</div>
+      </div>
+      <div class="item">
+        <div class="item-title">apps/web/tools/generate-llms.js</div>
+        <div class="item-desc">Horizons platform tool that was silently failing and blocking builds. Not needed.</div>
+        <div class="item-action">Remove from build script in package.json</div>
       </div>
     </div>
 
-    <!-- Arrow -->
-    <div class="arrow-col"><div class="arrow">→</div></div>
-
-    <!-- Column 2: Frontend Pages -->
-    <div class="flow-column">
-      <div class="flow-column-title">⚛️ React Frontend (localhost:3000)</div>
-      <div class="node node-frontend" onclick="showDetail('public-pages')">
-        <div class="node-icon">🏠</div>
-        <div class="node-title">Public Pages</div>
-        <div class="node-desc">Home · About · Services · Contact · Book Now</div>
-        <span class="node-badge badge-live">✓ Working</span>
+    <div class="cleanup-card fix">
+      <h3>🔧 Fix These Issues</h3>
+      <div class="item">
+        <div class="item-title">Migration file with space in name</div>
+        <div class="item-desc">"1772999999 accounting collections.js" — space in filename causes issues on Linux/deployment.</div>
+        <div class="item-action">Rename to: 1772999999_accounting_collections.js</div>
       </div>
-      <div class="node node-frontend" onclick="showDetail('auth-pages')">
-        <div class="node-icon">🔑</div>
-        <div class="node-title">Auth Pages</div>
-        <div class="node-desc">Parent Login · Admin Login · Password Reset · Signup</div>
-        <span class="node-badge badge-live">✓ Working</span>
+      <div class="item">
+        <div class="item-title">apps/web/package.json build script</div>
+        <div class="item-desc">Still runs "node tools/generate-llms.js || true" which is slow and pointless.</div>
+        <div class="item-action">Change to: "build": "vite build --outDir dist"</div>
       </div>
-      <div class="node node-frontend" onclick="showDetail('parent-dashboard')">
-        <div class="node-icon">📋</div>
-        <div class="node-title">Parent Dashboard</div>
-        <div class="node-desc">Child info · Fee status · Quick actions · Notifications</div>
-        <span class="node-badge badge-live">✓ Working</span>
+      <div class="item">
+        <div class="item-title">Duplicate migration: admins_auth created twice</div>
+        <div class="item-desc">1772145445 and 1772223306 both create admins_auth collection. Second one skips silently but is confusing.</div>
+        <div class="item-action">Review and remove the duplicate</div>
       </div>
-      <div class="node node-frontend" onclick="showDetail('payment-pages')">
-        <div class="node-icon">💳</div>
-        <div class="node-title">Payment Pages</div>
-        <div class="node-desc">Pay fee (Easypaisa/JazzCash/Bank) · Payment history</div>
-        <span class="node-badge badge-mock">⚠ Needs Gateway</span>
+      <div class="item">
+        <div class="item-title">apps/pocketbase/pb_data committed to git</div>
+        <div class="item-desc">SQLite database files (.db) are binary and shouldn't be in git — causes conflicts and leaks data.</div>
+        <div class="item-action">Add apps/pocketbase/pb_data/ to .gitignore</div>
       </div>
-      <div class="node node-frontend" onclick="showDetail('tracking-page')">
-        <div class="node-icon">📍</div>
-        <div class="node-title">Van Tracking</div>
-        <div class="node-desc">Live GPS map · Van status · Driver info · ETA</div>
-        <span class="node-badge badge-mock">⚠ Needs GPS</span>
+      <div class="item">
+        <div class="item-title">saferide-dataflow.html in repo root</div>
+        <div class="item-desc">Developer tool file sitting in repo root — should be in docs/ or deleted.</div>
+        <div class="item-action">mv saferide-dataflow.html docs/ or delete</div>
       </div>
-      <div class="node node-frontend" onclick="showDetail('admin-dashboard')">
-        <div class="node-icon">⚙️</div>
-        <div class="node-title">Admin Dashboard</div>
-        <div class="node-desc">Parents · Payments · Vans · Notifications · Reports</div>
-        <span class="node-badge badge-live">✓ Working</span>
-      </div>
-      <div class="node node-frontend" onclick="showDetail('chatbot')">
-        <div class="node-icon">🤖</div>
-        <div class="node-title">AI Chatbot</div>
-        <div class="node-desc">Claude-powered support widget</div>
-        <span class="node-badge badge-needed">Needs API Key</span>
+      <div class="item">
+        <div class="item-title">Configure SMTP in PocketBase</div>
+        <div class="item-desc">Enrollment notification hook exists but emails fail silently — needs Gmail SMTP setup.</div>
+        <div class="item-action">PocketBase admin → Settings → Mail → Add Gmail SMTP</div>
       </div>
     </div>
 
-    <!-- Arrow -->
-    <div class="arrow-col"><div class="arrow">→</div></div>
-
-    <!-- Column 3: Backend -->
-    <div class="flow-column">
-      <div class="flow-column-title">🗄️ PocketBase Backend (localhost:8090)</div>
-      <div class="node node-backend" onclick="showDetail('pb-auth')">
-        <div class="node-icon">🔒</div>
-        <div class="node-title">Auth System</div>
-        <div class="node-desc">JWT tokens · Session management · OTP · Password reset</div>
-        <span class="node-badge badge-live">✓ Working</span>
+    <div class="cleanup-card keep">
+      <h3>✅ Keep These (Good Code)</h3>
+      <div class="item">
+        <div class="item-title">apps/web/src/lib/pocketbaseClient.js</div>
+        <div class="item-desc">Clean env-var based config. Works for both local dev and production.</div>
       </div>
-      <div class="node node-backend" onclick="showDetail('pb-api')">
-        <div class="node-icon">🔌</div>
-        <div class="node-title">REST API</div>
-        <div class="node-desc">Auto-generated CRUD for all collections · File uploads</div>
-        <span class="node-badge badge-live">✓ Working</span>
+      <div class="item">
+        <div class="item-title">apps/web/public/.htaccess</div>
+        <div class="item-desc">Correct SPA routing for Hostinger Apache. Already properly configured.</div>
       </div>
-      <div class="node node-backend" onclick="showDetail('pb-rules')">
-        <div class="node-icon">🛡️</div>
-        <div class="node-title">API Rules</div>
-        <div class="node-desc">Collection-level access control · Admin-only rules</div>
-        <span class="node-badge badge-ready">Configured</span>
+      <div class="item">
+        <div class="item-title">apps/api/src/main.js (Express proxy)</div>
+        <div class="item-desc">Elegant Passenger-compatible PocketBase launcher. Well structured.</div>
       </div>
-      <div class="node node-backend" onclick="showDetail('pb-hooks')">
-        <div class="node-icon">⚡</div>
-        <div class="node-title">Hooks / Events</div>
-        <div class="node-desc">After-save triggers · Email notifications · OTP sending</div>
-        <span class="node-badge badge-mock">⚠ Email not set</span>
+      <div class="item">
+        <div class="item-title">AuthContext.jsx</div>
+        <div class="item-desc">Clean separation of parent/admin auth. Good use of context pattern.</div>
       </div>
-      <div class="node node-backend" onclick="showDetail('pb-migrations')">
-        <div class="node-icon">📦</div>
-        <div class="node-title">Migrations</div>
-        <div class="node-desc">19 migration files · All collections created</div>
-        <span class="node-badge badge-live">✓ Applied</span>
+      <div class="item">
+        <div class="item-title">pb_hooks/enrollment-notification.pb.js</div>
+        <div class="item-desc">Good server-side hook. Just needs SMTP to work.</div>
       </div>
     </div>
 
-    <!-- Arrow -->
-    <div class="arrow-col"><div class="arrow">→</div></div>
-
-    <!-- Column 4: Database & External -->
-    <div class="flow-column">
-      <div class="flow-column-title">🗃️ Collections + External APIs</div>
-      <div class="node node-db" onclick="showDetail('col-parents')">
-        <div class="node-icon">👨‍👩‍👧</div>
-        <div class="node-title">parents (Auth)</div>
-        <div class="node-desc">fullName · email · childName · enrollmentStatus · shift</div>
-        <span class="node-badge badge-live">✓ Active</span>
+    <div class="cleanup-card optimize">
+      <h3>⚡ Optimize These</h3>
+      <div class="item">
+        <div class="item-title">AccountingPage.jsx (1337 lines)</div>
+        <div class="item-desc">Largest file in project. Split into: AccountingPage, IncomeTab, ExpenseTab, AccountingModals components.</div>
       </div>
-      <div class="node node-db" onclick="showDetail('col-payments')">
-        <div class="node-icon">💰</div>
-        <div class="node-title">payments</div>
-        <div class="node-desc">amount · method · status · transactionId · receipt</div>
-        <span class="node-badge badge-live">✓ Active</span>
+      <div class="item">
+        <div class="item-title">AdminDashboard.jsx (958 lines)</div>
+        <div class="item-desc">Split into tab components: EnrollmentsTab, ParentsTab, PaymentsTab, VansTab, NotificationsTab, ReportsTab.</div>
       </div>
-      <div class="node node-db" onclick="showDetail('col-vans')">
-        <div class="node-icon">🚐</div>
-        <div class="node-title">vans</div>
-        <div class="node-desc">vanId · driverName · capacity · licensePlate · status</div>
-        <span class="node-badge badge-live">✓ Active</span>
+      <div class="item">
+        <div class="item-title">Add .gitignore entries</div>
+        <div class="item-desc">Missing: apps/web/dist/, apps/*/pb_data/, *.env.production, .env.local, *.log</div>
       </div>
-      <div class="node node-db" onclick="showDetail('col-gps')">
-        <div class="node-icon">📡</div>
-        <div class="node-title">gpsLocations</div>
-        <div class="node-desc">latitude · longitude · locationName · eta · status</div>
-        <span class="node-badge badge-mock">⚠ No live data</span>
-      </div>
-      <div class="node node-external" onclick="showDetail('ext-easypaisa')">
-        <div class="node-icon">📱</div>
-        <div class="node-title">Easypaisa / JazzCash</div>
-        <div class="node-desc">Mobile payment gateway API · Merchant account needed</div>
-        <span class="node-badge badge-needed">⛔ Not Connected</span>
-      </div>
-      <div class="node node-external" onclick="showDetail('ext-gps')">
-        <div class="node-icon">🛰️</div>
-        <div class="node-title">GPS Hardware</div>
-        <div class="node-desc">Van-installed tracker sending lat/lng to PocketBase</div>
-        <span class="node-badge badge-needed">⛔ Not Connected</span>
-      </div>
-      <div class="node node-external" onclick="showDetail('ext-claude')">
-        <div class="node-icon">🤖</div>
-        <div class="node-title">Claude API</div>
-        <div class="node-desc">Anthropic API for AI chatbot · claude-sonnet-4</div>
-        <span class="node-badge badge-needed">⛔ Needs API Key</span>
-      </div>
-      <div class="node node-external" onclick="showDetail('ext-email')">
-        <div class="node-icon">✉️</div>
-        <div class="node-title">Email / SMTP</div>
-        <div class="node-desc">OTP delivery · Payment confirmations · Notifications</div>
-        <span class="node-badge badge-needed">⛔ Not Configured</span>
+      <div class="item">
+        <div class="item-title">Unused Radix UI packages</div>
+        <div class="item-desc">@radix-ui/react-alert-dialog, react-avatar, react-checkbox, react-dialog, react-dropdown-menu, react-slider — imported but components not in src/components/ui/. Remove to reduce bundle size.</div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════════════════════ -->
-<!--  TAB 2: FEATURE STATUS                                                    -->
-<!-- ══════════════════════════════════════════════════════════════════════════ -->
-<div id="tab-status" class="main" style="display:none">
-  <div class="section-heading">Feature Status Overview</div>
+<!-- ── TAB 3: STATUS ── -->
+<div id="tab-status" class="content">
   <table class="status-table">
     <thead>
       <tr>
         <th>Feature</th>
         <th>Status</th>
-        <th>What Works Now</th>
-        <th>What's Missing</th>
-        <th>How to Enable</th>
+        <th>Works Now</th>
+        <th>Missing</th>
+        <th>Fix</th>
       </tr>
     </thead>
     <tbody>
       <tr>
-        <td><div class="feature-name">🏠 Public Pages</div><div class="feature-desc">Home, About, Services, Contact</div></td>
-        <td><span class="status-pill" style="background:#dcfce7;color:#15803d">✓ Fully Working</span></td>
-        <td>All pages load, no double headers, good UI</td>
-        <td>Nothing missing</td>
-        <td>Already done ✓</td>
+        <td>🌐 Public Website</td>
+        <td><span class="badge badge-ok">✓ Live</span></td>
+        <td>All pages, booking form, logo</td>
+        <td>Nothing</td>
+        <td>—</td>
       </tr>
       <tr>
-        <td><div class="feature-name">📋 Booking Form</div><div class="feature-desc">/book — enroll child</div></td>
-        <td><span class="status-pill" style="background:#dcfce7;color:#15803d">✓ Fully Working</span></td>
-        <td>Saves to DB, shows confirmation screen</td>
-        <td>No email confirmation sent</td>
-        <td>Configure SMTP in PocketBase settings</td>
+        <td>📝 Booking / Enrollment</td>
+        <td><span class="badge badge-ok">✓ Working</span></td>
+        <td>Form saves to DB, inline confirmation</td>
+        <td>Email notification (SMTP)</td>
+        <td>Configure Gmail SMTP in PocketBase</td>
       </tr>
       <tr>
-        <td><div class="feature-name">🔑 Parent Login / Auth</div><div class="feature-desc">/login — parent account</div></td>
-        <td><span class="status-pill" style="background:#fef9c3;color:#a16207">⚠ Partial</span></td>
-        <td>Login/logout works if parent account exists in DB</td>
-        <td>No self-signup yet; admin must create parent accounts</td>
-        <td>Admin creates parent in Admin Dashboard or PocketBase UI</td>
+        <td>👨‍👩‍👧 Parent Login</td>
+        <td><span class="badge badge-ok">✓ Working</span></td>
+        <td>Login, logout, protected routes</td>
+        <td>Self-signup disabled (by design)</td>
+        <td>Admin creates accounts via Enrollments tab</td>
       </tr>
       <tr>
-        <td><div class="feature-name">📊 Parent Dashboard</div><div class="feature-desc">/dashboard — after login</div></td>
-        <td><span class="status-pill" style="background:#fef9c3;color:#a16207">⚠ Partial</span></td>
-        <td>Shows child info, fee card, quick links</td>
-        <td>Needs a parent record in DB with all fields filled</td>
-        <td>Create parent via Admin Dashboard with full details</td>
+        <td>📊 Parent Dashboard</td>
+        <td><span class="badge badge-ok">✓ Working</span></td>
+        <td>Child info, fee card, status</td>
+        <td>Nothing</td>
+        <td>—</td>
       </tr>
       <tr>
-        <td><div class="feature-name">💳 Payment Page</div><div class="feature-desc">/payments — pay fees</div></td>
-        <td><span class="status-pill" style="background:#fef9c3;color:#a16207">⚠ Partial</span></td>
-        <td>Creates payment record in DB, bank deposit upload works</td>
-        <td>Easypaisa/JazzCash don't actually charge — no merchant account</td>
-        <td>Get merchant account from Easypaisa/JazzCash, add API keys</td>
+        <td>💳 Payments</td>
+        <td><span class="badge badge-warn">⚠ Partial</span></td>
+        <td>Creates DB record, bank upload works</td>
+        <td>Easypaisa/JazzCash don't charge</td>
+        <td>Apply for merchant account</td>
       </tr>
       <tr>
-        <td><div class="feature-name">📜 Payment History</div><div class="feature-desc">/payment-history</div></td>
-        <td><span class="status-pill" style="background:#dcfce7;color:#15803d">✓ Fully Working</span></td>
-        <td>Shows all payments, filter by status, download receipt</td>
-        <td>Nothing missing</td>
-        <td>Already done ✓</td>
+        <td>📋 Payment History</td>
+        <td><span class="badge badge-ok">✓ Working</span></td>
+        <td>Shows all, filter, download</td>
+        <td>Nothing</td>
+        <td>—</td>
       </tr>
       <tr>
-        <td><div class="feature-name">📍 Van Tracking</div><div class="feature-desc">/van-tracking — live GPS</div></td>
-        <td><span class="status-pill" style="background:#fee2e2;color:#b91c1c">⛔ Needs Hardware</span></td>
-        <td>Page loads, shows map of Lake City area</td>
-        <td>No real GPS data — needs a hardware tracker in the van</td>
-        <td>Buy GPS tracker (e.g. Teltonika FMB920), configure it to POST to PocketBase gpsLocations collection</td>
+        <td>🗺️ Van Tracking</td>
+        <td><span class="badge badge-error">⛔ No Hardware</span></td>
+        <td>Map UI loads, shows static location</td>
+        <td>GPS tracker hardware</td>
+        <td>Buy Teltonika FMB920 (~Rs 10,000)</td>
       </tr>
       <tr>
-        <td><div class="feature-name">🔔 Notifications</div><div class="feature-desc">/notifications</div></td>
-        <td><span class="status-pill" style="background:#dcfce7;color:#15803d">✓ Fully Working</span></td>
-        <td>Shows notifications, mark as read, admin can broadcast</td>
-        <td>No push notifications (browser only)</td>
-        <td>Already done ✓ — add web push later with service workers</td>
+        <td>🔔 Notifications</td>
+        <td><span class="badge badge-ok">✓ Working</span></td>
+        <td>Shows, mark read, admin broadcast</td>
+        <td>Push notifications</td>
+        <td>Use Web Push API (free)</td>
       </tr>
       <tr>
-        <td><div class="feature-name">⚙️ Admin Dashboard</div><div class="feature-desc">/admin</div></td>
-        <td><span class="status-pill" style="background:#dcfce7;color:#15803d">✓ Fully Working</span></td>
-        <td>Add/edit/delete parents, approve payments, manage vans, broadcast, export CSV</td>
-        <td>Nothing critical missing</td>
-        <td>Login: admin@saferide.com.pk / Warraich@1981</td>
+        <td>⚙️ Admin Dashboard</td>
+        <td><span class="badge badge-ok">✓ Working</span></td>
+        <td>Full CRUD, approve enrollments, CSV export</td>
+        <td>Nothing</td>
+        <td>—</td>
       </tr>
       <tr>
-        <td><div class="feature-name">🤖 AI Chatbot</div><div class="feature-desc">Bottom-right widget</div></td>
-        <td><span class="status-pill" style="background:#fee2e2;color:#b91c1c">⛔ Needs API Key</span></td>
-        <td>Widget opens and shows UI correctly</td>
-        <td>Claude API key not set — API calls fail with 401</td>
-        <td>Get API key from console.anthropic.com, add to ChatbotWidget.jsx headers</td>
+        <td>📊 Accounting</td>
+        <td><span class="badge badge-ok">✓ Working</span></td>
+        <td>Income, expenses, P&L, per-student</td>
+        <td>Nothing</td>
+        <td>—</td>
       </tr>
       <tr>
-        <td><div class="feature-name">✉️ Email / OTP</div><div class="feature-desc">Password reset, confirmations</div></td>
-        <td><span class="status-pill" style="background:#fee2e2;color:#b91c1c">⛔ Not Configured</span></td>
+        <td>🤖 AI Chatbot</td>
+        <td><span class="badge badge-error">⛔ Needs Key</span></td>
+        <td>Widget UI opens</td>
+        <td>Claude API key</td>
+        <td>Get from console.anthropic.com</td>
+      </tr>
+      <tr>
+        <td>📧 Email / OTP</td>
+        <td><span class="badge badge-error">⛔ Not Configured</span></td>
         <td>Password reset form exists</td>
-        <td>No SMTP server configured — emails don't send</td>
-        <td>PocketBase Admin → Settings → Mail → add Gmail SMTP or SendGrid</td>
-      </tr>
-      <tr>
-        <td><div class="feature-name">📤 CSV Export</div><div class="feature-desc">Admin → Reports tab</div></td>
-        <td><span class="status-pill" style="background:#dcfce7;color:#15803d">✓ Fully Working</span></td>
-        <td>Downloads real CSV files for payments, parents, fleet</td>
-        <td>Nothing missing</td>
-        <td>Already done ✓</td>
+        <td>SMTP config</td>
+        <td>PocketBase → Settings → Mail → Gmail SMTP</td>
       </tr>
     </tbody>
   </table>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════════════════════ -->
-<!--  TAB 3: MOCK GUIDE                                                        -->
-<!-- ══════════════════════════════════════════════════════════════════════════ -->
-<div id="tab-mock" class="main" style="display:none">
-  <div class="section-heading">🧪 How to Enable Demo / Mock Mode</div>
-
-  <div class="guide-grid">
-    <div class="guide-card">
-      <h3>📁 Step 1 — Copy mockData.js</h3>
-      <p>A file called <strong>mockData.js</strong> is included in your download. Copy it to:</p>
-      <div class="code-block">apps/web/src/lib/mockData.js</div>
-      <p style="margin-top:12px">It contains sample data for: parents, payments, vans, GPS location, notifications, and admin lists — all realistic Lake City data.</p>
+<!-- ── TAB 4: FEATURES ── -->
+<div id="tab-features" class="content">
+  <p style="color:#64748b; font-size:13px; margin-bottom:20px;">All suggestions below can be implemented with your existing PocketBase + React stack at zero additional cost.</p>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="icon">📱</div>
+      <h3>WhatsApp Notifications</h3>
+      <p>Send automatic WhatsApp messages when van departs, arrives, or fee is due. Use Twilio's free trial or Meta Cloud API (free for first 1000 messages/month).</p>
+      <span class="effort effort-easy">Easy — 1 day</span>
     </div>
+    <div class="feature-card">
+      <div class="icon">📅</div>
+      <h3>Attendance Tracking</h3>
+      <p>Mark each student as Present/Absent per day. Driver marks attendance on a simple page. Admin sees monthly attendance reports. Parents get notified if child missed pickup.</p>
+      <span class="effort effort-easy">Easy — 2 days</span>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🧾</div>
+      <h3>Fee Voucher / Invoice PDF</h3>
+      <p>Generate a printable PDF fee slip for each parent per month. Admin sends it via the portal. Parents can download from their dashboard. Build with jsPDF (free).</p>
+      <span class="effort effort-easy">Easy — 1 day</span>
+    </div>
+    <div class="feature-card">
+      <div class="icon">⭐</div>
+      <h3>Driver Rating System</h3>
+      <p>After each month, parents rate the driver (1-5 stars + comment). Ratings shown in admin dashboard. Motivates drivers and builds trust with parents.</p>
+      <span class="effort effort-easy">Easy — 2 days</span>
+    </div>
+    <div class="feature-card">
+      <div class="icon">📊</div>
+      <h3>Monthly Reports (Admin)</h3>
+      <p>Auto-generate monthly summary: total income, expenses, profit, students served, absent days, pending payments. Export as PDF. Currently only CSV export exists.</p>
+      <span class="effort effort-easy">Easy — 1 day</span>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🗓️</div>
+      <h3>Holiday / Off-Day Calendar</h3>
+      <p>Admin marks school holidays and van off-days. Parents see the calendar on their dashboard. Avoids confusion when service is suspended on public holidays.</p>
+      <span class="effort effort-easy">Easy — 1 day</span>
+    </div>
+    <div class="feature-card">
+      <div class="icon">💬</div>
+      <h3>Parent-Admin Messaging</h3>
+      <p>Simple inbox system inside parent dashboard to message the admin directly. Admin replies from the admin panel. No external service needed — just a messages collection in PocketBase.</p>
+      <span class="effort effort-medium">Medium — 3 days</span>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🔔</div>
+      <h3>Browser Push Notifications</h3>
+      <p>Real push notifications to parents' phones when van is nearby or fee is due. Uses Web Push API — completely free, no third-party service needed.</p>
+      <span class="effort effort-medium">Medium — 2 days</span>
+    </div>
+    <div class="feature-card">
+      <div class="icon">📍</div>
+      <h3>Route Management</h3>
+      <p>Admin defines van routes with stop-by-stop pickup points and estimated times. Parents see their estimated pickup time each morning. Reduces "where is the van?" calls.</p>
+      <span class="effort effort-medium">Medium — 3 days</span>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🎓</div>
+      <h3>Multiple Children Per Parent</h3>
+      <p>Currently one parent = one child. Allow parents to register multiple children with separate fee tracking per child. Common in families with siblings at same school.</p>
+      <span class="effort effort-medium">Medium — 2 days</span>
+    </div>
+    <div class="feature-card">
+      <div class="icon">📲</div>
+      <h3>PWA (Install as App)</h3>
+      <p>Add a manifest.json and service worker to make SafeRide installable on Android/iOS home screens. Parents get app-like experience without an App Store. Zero cost.</p>
+      <span class="effort effort-easy">Easy — 4 hours</span>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🚨</div>
+      <h3>Emergency SOS Button</h3>
+      <p>Driver has a one-tap SOS button that alerts admin + all parents instantly with GPS location. Critical safety feature for a school transport service.</p>
+      <span class="effort effort-medium">Medium — 2 days</span>
+    </div>
+  </div>
+</div>
 
-    <div class="guide-card">
-      <h3>🔧 Step 2 — Enable Demo Mode</h3>
-      <p>Open <strong>mockData.js</strong> and set the flag:</p>
-      <div class="code-block">
-<span class="code-comment">// src/lib/mockData.js</span><br>
-<span class="code-key">export const DEMO_MODE</span> = <span class="code-val-true">true</span>;  <span class="code-comment">← enable mock</span><br>
-<span class="code-key">export const DEMO_MODE</span> = <span class="code-val-false">false</span>; <span class="code-comment">← use real DB</span>
+<!-- ── TAB 5: DEPLOYMENT ── -->
+<div id="tab-deployment" class="content">
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+    <div class="cleanup-card keep">
+      <h3 style="color:#60a5fa">🚀 Current Live Setup</h3>
+      <div class="item">
+        <div class="item-title">Frontend</div>
+        <div class="item-desc">https://saferide.com.pk</div>
+        <div class="item-action">Hostinger Business Hosting → public_html</div>
+      </div>
+      <div class="item">
+        <div class="item-title">Backend API</div>
+        <div class="item-desc">https://mediumspringgreen-otter-820696.hostingersite.com</div>
+        <div class="item-action">Hostinger Node.js App → Passenger → Express → PocketBase</div>
+      </div>
+      <div class="item">
+        <div class="item-title">Database</div>
+        <div class="item-desc">SQLite via PocketBase</div>
+        <div class="item-action">/nodejs/pb_data/ on Hostinger server</div>
+      </div>
+      <div class="item">
+        <div class="item-title">PocketBase Admin</div>
+        <div class="item-desc">https://mediumspringgreen-otter-820696.hostingersite.com/_/</div>
+        <div class="item-action">admin@saferide.com.pk</div>
       </div>
     </div>
-
-    <div class="guide-card">
-      <h3>💳 Payment Page — Mock Mode</h3>
-      <p>Add this to the top of <strong>PaymentPage.jsx</strong>:</p>
-      <div class="code-block">
-<span class="code-key">import</span> { DEMO_MODE } <span class="code-key">from</span> <span class="code-str">'@/lib/mockData.js'</span>;<br><br>
-<span class="code-comment">// In handleMobilePayment:</span><br>
-<span class="code-key">if</span> (DEMO_MODE) {<br>
-&nbsp;&nbsp;toast({ title: <span class="code-str">"✓ Demo Payment Accepted"</span>,<br>
-&nbsp;&nbsp;&nbsp;&nbsp;description: <span class="code-str">"Mock mode — no real charge"</span> });<br>
-&nbsp;&nbsp;navigate(<span class="code-str">'/payment-history'</span>);<br>
-&nbsp;&nbsp;<span class="code-key">return</span>;<br>
-}
+    <div class="cleanup-card fix">
+      <h3 style="color:#fbbf24">⚠️ To-Do for Production</h3>
+      <div class="item">
+        <div class="item-title">1. Configure Gmail SMTP</div>
+        <div class="item-desc">PocketBase → Settings → Mail → Add Gmail credentials</div>
+        <div class="item-action">Enables: password reset, enrollment emails</div>
       </div>
-    </div>
-
-    <div class="guide-card">
-      <h3>📍 Van Tracking — Mock Mode</h3>
-      <p>Add this to <strong>VanTrackingPage.jsx</strong>:</p>
-      <div class="code-block">
-<span class="code-key">import</span> { DEMO_MODE, MOCK_ASSIGNMENT, MOCK_GPS }<br>
-&nbsp;&nbsp;<span class="code-key">from</span> <span class="code-str">'@/lib/mockData.js'</span>;<br><br>
-<span class="code-comment">// In fetchTrackingData:</span><br>
-<span class="code-key">if</span> (DEMO_MODE) {<br>
-&nbsp;&nbsp;setAssignment(MOCK_ASSIGNMENT);<br>
-&nbsp;&nbsp;setVan(MOCK_ASSIGNMENT.expand.vanId);<br>
-&nbsp;&nbsp;setGpsLocation(MOCK_GPS);<br>
-&nbsp;&nbsp;<span class="code-key">return</span>;<br>
-}
+      <div class="item">
+        <div class="item-title">2. Get Claude API Key</div>
+        <div class="item-desc">console.anthropic.com → API Keys → add to ChatbotWidget.jsx</div>
+        <div class="item-action">Enables: AI chatbot</div>
       </div>
-    </div>
-
-    <div class="guide-card">
-      <h3>📊 Parent Dashboard — Mock Mode</h3>
-      <div class="code-block">
-<span class="code-key">import</span> { DEMO_MODE, MOCK_PARENT, MOCK_PAYMENTS }<br>
-&nbsp;&nbsp;<span class="code-key">from</span> <span class="code-str">'@/lib/mockData.js'</span>;<br><br>
-<span class="code-comment">// In useEffect fetchData:</span><br>
-<span class="code-key">if</span> (DEMO_MODE) {<br>
-&nbsp;&nbsp;setParentData(MOCK_PARENT);<br>
-&nbsp;&nbsp;setLatestPayment(MOCK_PAYMENTS[0]);<br>
-&nbsp;&nbsp;setLoading(<span class="code-val-false">false</span>);<br>
-&nbsp;&nbsp;<span class="code-key">return</span>;<br>
-}
+      <div class="item">
+        <div class="item-title">3. Set up DB backups</div>
+        <div class="item-desc">Hostinger daily backups cover this, but also manually backup pb_data monthly</div>
+        <div class="item-action">Download pb_data/ via SSH/FTP monthly</div>
       </div>
-    </div>
-
-    <div class="guide-card">
-      <h3>🔔 Notifications — Mock Mode</h3>
-      <div class="code-block">
-<span class="code-key">import</span> { DEMO_MODE, MOCK_NOTIFICATIONS }<br>
-&nbsp;&nbsp;<span class="code-key">from</span> <span class="code-str">'@/lib/mockData.js'</span>;<br><br>
-<span class="code-comment">// In fetchNotifications:</span><br>
-<span class="code-key">if</span> (DEMO_MODE) {<br>
-&nbsp;&nbsp;setNotifications(MOCK_NOTIFICATIONS);<br>
-&nbsp;&nbsp;setLoading(<span class="code-val-false">false</span>);<br>
-&nbsp;&nbsp;<span class="code-key">return</span>;<br>
-}
+      <div class="item">
+        <div class="item-title">4. Upgrade to VPS (optional)</div>
+        <div class="item-desc">When ready for api.saferide.com.pk custom domain</div>
+        <div class="item-action">~$5/month, enables all advanced features</div>
       </div>
-    </div>
-
-    <div class="guide-card" style="grid-column: 1 / -1;">
-      <h3>🗺️ What Each External Service Needs (Real Mode)</h3>
-      <table style="width:100%;border-collapse:collapse;font-size:0.82rem;margin-top:8px">
-        <thead>
-          <tr style="background:#f1f5f9">
-            <th style="padding:10px;text-align:left;border-bottom:2px solid #e2e8f0">Service</th>
-            <th style="padding:10px;text-align:left;border-bottom:2px solid #e2e8f0">How to Get</th>
-            <th style="padding:10px;text-align:left;border-bottom:2px solid #e2e8f0">Where to Add</th>
-            <th style="padding:10px;text-align:left;border-bottom:2px solid #e2e8f0">Cost</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr><td style="padding:10px;border-bottom:1px solid #f1f5f9"><strong>Easypaisa Gateway</strong></td><td style="padding:10px;border-bottom:1px solid #f1f5f9">Apply at easypaisa.com.pk/business</td><td style="padding:10px;border-bottom:1px solid #f1f5f9">PaymentPage.jsx → merchant credentials</td><td style="padding:10px;border-bottom:1px solid #f1f5f9">Free account, % per txn</td></tr>
-          <tr><td style="padding:10px;border-bottom:1px solid #f1f5f9"><strong>JazzCash Gateway</strong></td><td style="padding:10px;border-bottom:1px solid #f1f5f9">Apply at jazzcash.com.pk/corporate</td><td style="padding:10px;border-bottom:1px solid #f1f5f9">PaymentPage.jsx → merchant credentials</td><td style="padding:10px;border-bottom:1px solid #f1f5f9">Free account, % per txn</td></tr>
-          <tr><td style="padding:10px;border-bottom:1px solid #f1f5f9"><strong>GPS Tracker</strong></td><td style="padding:10px;border-bottom:1px solid #f1f5f9">Buy Teltonika FMB920 or Queclink GV20 (~$40)</td><td style="padding:10px;border-bottom:1px solid #f1f5f9">Configure to POST to /api/collections/gpsLocations/records</td><td style="padding:10px;border-bottom:1px solid #f1f5f9">~Rs. 8,000–12,000 per van</td></tr>
-          <tr><td style="padding:10px;border-bottom:1px solid #f1f5f9"><strong>Claude API (Chatbot)</strong></td><td style="padding:10px;border-bottom:1px solid #f1f5f9">console.anthropic.com → API Keys</td><td style="padding:10px;border-bottom:1px solid #f1f5f9">ChatbotWidget.jsx → headers: {'x-api-key': 'YOUR_KEY'}</td><td style="padding:10px;border-bottom:1px solid #f1f5f9">Pay per use, ~$3/million tokens</td></tr>
-          <tr><td style="padding:10px"><strong>Email / SMTP</strong></td><td style="padding:10px">Gmail App Password or SendGrid free tier</td><td style="padding:10px">PocketBase Admin → Settings → Mail Settings</td><td style="padding:10px">Free (Gmail) or free 100/day (SendGrid)</td></tr>
-        </tbody>
-      </table>
+      <div class="item">
+        <div class="item-title">5. Update phone/email in ChatbotWidget</div>
+        <div class="item-desc">Currently shows +92 300 1234567 placeholder</div>
+        <div class="item-action">Update with real SafeRide contact details</div>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
-// ── Tab switching ─────────────────────────────────────────────────────────────
 function showTab(name) {
-  ['flow','status','mock'].forEach(t => {
-    document.getElementById('tab-' + t).style.display = t === name ? 'block' : 'none';
-  });
-  document.querySelectorAll('.tab').forEach((btn, i) => {
-    btn.classList.toggle('active', ['flow','status','mock'][i] === name);
-  });
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
 }
 
-// ── Node detail data ──────────────────────────────────────────────────────────
 const details = {
-  parent: {
-    title: '👨‍👩‍👧 Parent User',
-    desc: 'Parents are the primary users of SafeRide. They register via the booking form, get an account created by admin, then log in to track their child\'s van, pay monthly fees, and view notifications.',
-    items: [
-      { label: 'Auth Collection', value: 'parents (PocketBase Auth)' },
-      { label: 'Login Route', value: '/login' },
-      { label: 'Dashboard', value: '/dashboard' },
-      { label: 'Data Stored', value: 'fullName, email, childName, class, school, address, shift, enrollmentStatus' },
-      { label: 'Status', value: '✓ Working' },
-    ]
-  },
-  admin: {
-    title: '🔐 Admin User',
-    desc: 'Admins manage the entire system. They can add/edit/delete parents, approve payments, manage the van fleet, send broadcast notifications, and export reports.',
-    items: [
-      { label: 'Auth Collection', value: 'admins (PocketBase Auth)' },
-      { label: 'Login Route', value: '/admin-login' },
-      { label: 'Dashboard', value: '/admin' },
-      { label: 'Default Login', value: 'admin@saferide.com.pk' },
-      { label: 'Status', value: '✓ Working' },
-    ]
-  },
-  visitor: {
-    title: '🌐 Visitor (Public)',
-    desc: 'Unauthenticated users can browse all public pages and submit the booking enrollment form or contact form. No login required for these actions.',
-    items: [
-      { label: 'Accessible Routes', value: '/, /about, /services, /contact, /book' },
-      { label: 'Can Submit', value: 'Enrollment form, Contact form' },
-      { label: 'Cannot Access', value: 'Dashboard, Payments, Tracking, Admin' },
-      { label: 'Status', value: '✓ All working' },
-    ]
-  },
-  'public-pages': {
-    title: '🏠 Public Pages',
-    desc: 'All public-facing pages are fully working. They no longer have duplicate headers (fixed). Routes: /, /about, /services, /contact, /book, /confirmation/:id',
-    items: [
-      { label: 'Bug Fixed', value: 'Duplicate header/footer removed from all pages' },
-      { label: 'Routes Fixed', value: '/parent-signup, /parent-login, /booking all work' },
-      { label: 'Images', value: 'Loading from Horizons CDN — may need local hosting for production' },
-      { label: 'Status', value: '✓ Fully Working' },
-    ]
-  },
-  'payment-pages': {
-    title: '💳 Payment Pages',
-    desc: 'The payment UI is complete and saves records to PocketBase. However Easypaisa and JazzCash tabs simulate the payment without actually charging because no merchant API credentials are configured yet. Bank deposit works fully.',
-    items: [
-      { label: 'Bank Deposit', value: '✓ Working — uploads screenshot, creates record' },
-      { label: 'Easypaisa', value: '⚠ Creates DB record but no real charge' },
-      { label: 'JazzCash', value: '⚠ Creates DB record but no real charge' },
-      { label: 'Fix', value: 'Get merchant account, add API keys to PaymentPage.jsx' },
-    ]
-  },
-  'tracking-page': {
-    title: '📍 Van Tracking Page',
-    desc: 'The tracking page UI is complete with a map, trip progress, driver info and ETA. Currently shows the Lake City area on Google Maps. For live tracking you need a GPS hardware device installed in each van that periodically POSTs coordinates to PocketBase.',
-    items: [
-      { label: 'Map', value: 'Google Maps embed — shows Lake City area' },
-      { label: 'Real GPS', value: '⛔ Needs GPS hardware tracker in van' },
-      { label: 'Recommended Device', value: 'Teltonika FMB920 (~Rs 10,000)' },
-      { label: 'How it works', value: 'GPS device POSTs lat/lng to PocketBase gpsLocations collection every 30 seconds' },
-    ]
-  },
-  'pb-hooks': {
-    title: '⚡ PocketBase Hooks & Email',
-    desc: 'PocketBase fires after-save hooks when records are created. Currently the OTP hook tries to send an email but fails because no SMTP server is configured. This causes the 400 error on booking even though the record saves successfully.',
-    items: [
-      { label: 'Root Cause', value: 'OTP migration enables email OTP but no SMTP configured' },
-      { label: 'Fix Applied', value: 'BookingPage.jsx now shows success even if 400 returned' },
-      { label: 'Permanent Fix', value: 'PocketBase Admin → Settings → Mail → add Gmail SMTP' },
-      { label: 'Gmail SMTP', value: 'Host: smtp.gmail.com, Port: 587, use App Password' },
-    ]
-  },
-  'ext-claude': {
-    title: '🤖 Claude API (Chatbot)',
-    desc: 'The chatbot is powered by Claude Sonnet 4 via the Anthropic API. It needs an API key to work. Without it the chatbot widget opens but API calls fail silently.',
-    items: [
-      { label: 'Get API Key', value: 'console.anthropic.com → API Keys → Create Key' },
-      { label: 'Add to Code', value: 'ChatbotWidget.jsx → headers object → "x-api-key": "sk-ant-..."' },
-      { label: 'Model Used', value: 'claude-sonnet-4-20250514' },
-      { label: 'Cost', value: '~$3 per million input tokens — very cheap for a chatbot' },
-    ]
-  },
-  'col-gps': {
-    title: '📡 gpsLocations Collection',
-    desc: 'This collection stores real-time GPS coordinates from van trackers. Each record has latitude, longitude, location name, ETA, and status. The VanTrackingPage reads the latest record for the assigned van every 30 seconds.',
-    items: [
-      { label: 'Fields', value: 'vanId, latitude, longitude, locationName, status, eta' },
-      { label: 'Update Frequency', value: 'Should be updated every 30–60 seconds by GPS device' },
-      { label: 'Current State', value: 'Collection exists but empty — no GPS device connected' },
-      { label: 'Test', value: 'Manually add a record in PocketBase to test the tracking UI' },
-    ]
-  },
-  'ext-email': {
-    title: '✉️ Email / SMTP Configuration',
-    desc: 'PocketBase needs an SMTP server to send OTP codes, password reset emails, and payment confirmation emails. The easiest option is a Gmail account with App Password.',
-    items: [
-      { label: 'Option 1', value: 'Gmail: smtp.gmail.com:587, use App Password (not your real password)' },
-      { label: 'Option 2', value: 'SendGrid: free 100 emails/day, professional service' },
-      { label: 'Where to Set', value: 'PocketBase Admin (localhost:8090/_/) → Settings → Mail Settings' },
-      { label: 'After Setting', value: 'OTP, password reset, and booking confirmation emails will work' },
-    ]
-  },
-  'admin-dashboard': {
-    title: '⚙️ Admin Dashboard',
-    desc: 'Fully functional admin control panel with all features working. Includes Add/Edit/Delete parents with modal, van management, payment approval/rejection, broadcast notifications with templates, and real CSV export.',
-    items: [
-      { label: 'Add Parent', value: '✓ Modal with full form — creates PocketBase auth account' },
-      { label: 'Payment Approval', value: '✓ Approve or Reject buttons on pending payments' },
-      { label: 'CSV Export', value: '✓ Downloads real data — Payments, Parents, Fleet' },
-      { label: 'Reports Tab', value: '✓ Live stats — revenue, breakdowns, shift analysis' },
-    ]
-  },
+  visitor: { title: 'Visitor (Public User)', desc: 'Can access: Home, About, Services, Contact, Book. No login required. Booking form saves to <code>enrollments</code> collection. Admin then reviews and approves to create parent account.' },
+  parent: { title: 'Parent Account', desc: 'Authenticated via <code>parents</code> collection. Has access to: Dashboard, Payments, Payment History, Notifications, Van Tracking. Account created by admin after approving enrollment.' },
+  admin: { title: 'Admin Account', desc: 'Authenticated via <code>admins</code> collection. Full access to Admin Dashboard (/admin) and Accounting (/accounting). Created via PocketBase admin panel.' },
+  'public-pages': { title: 'Public Pages', desc: 'Routes: /, /about, /services, /contact, /book, /booking. All working. No authentication required. SEO handled via react-helmet.' },
+  'auth-pages': { title: 'Authentication Pages', desc: 'ParentLoginPage (/login, /parent-login), AdminLoginPage (/admin-login), PasswordResetPage (/password-reset). Uses PocketBase authWithPassword. OTP migration exists but email not configured.' },
+  'parent-portal': { title: 'Parent Portal', desc: 'Protected routes (ProtectedRoute component). ParentDashboard, PaymentPage, PaymentHistoryPage, NotificationsPage, VanTrackingPage. All read/write via PocketBase SDK.' },
+  'admin-portal': { title: 'Admin Dashboard', desc: '6 tabs: Enrollments (approve/reject), Parents (CRUD), Payments (approve), Vans (CRUD), Notifications (broadcast), Reports (CSV export). safeFetch pattern handles individual collection failures gracefully.' },
+  accounting: { title: 'Accounting Page', desc: 'Separate page at /accounting. Tracks: income_records (fee payments per student) and vehicle_expenses (fuel, maintenance, repair per van). Shows P&L summary, per-student fee status, breakdown charts.' },
+  chatbot: { title: 'AI Chatbot Widget', desc: 'Uses Anthropic Claude API directly from frontend. Needs VITE_ANTHROPIC_API_KEY or hardcoded key in ChatbotWidget.jsx. System prompt configured for SafeRide context. Responds in English and Urdu.' },
+  'pb-auth': { title: 'PocketBase Auth System', desc: 'Two separate auth collections: <code>parents</code> for parent logins, <code>admins</code> for admin logins. Both use email+password. OTP migration exists but disabled (no SMTP).' },
+  'pb-api': { title: 'PocketBase REST API', desc: 'Auto-generated endpoints for all collections. Frontend uses pocketbase JS SDK. API URL: mediumspringgreen-otter-820696.hostingersite.com/api/' },
+  'pb-hooks': { title: 'PocketBase Hooks', desc: '5 hook files: enrollment-notification (email on new booking), builder-mailer (Horizons leftover), custom-migrations-cmd, external-dashboard, superusers. enrollment-notification works but needs SMTP.' },
+  'pb-migrations': { title: 'Database Migrations', desc: '24 migration files. Issues: (1) admins_auth created in two files, (2) accounting file has space in name, (3) create_superuser migration creates admin@saferide.com.pk in parents collection causing conflicts.' },
+  'express-proxy': { title: 'Express Proxy Wrapper', desc: 'Required because Hostinger uses Passenger for Node.js. Express listens on Passenger-assigned port, spawns PocketBase on internal port 17549, proxies all requests via http-proxy-middleware.' },
+  'db-parents': { title: 'parents Collection', desc: 'Auth collection. Fields: fullName, phoneNumber, childName, childClass, schoolName, homeAddress, preferredShift, specialInstructions, enrollmentStatus. Created by admin when approving enrollment.' },
+  'db-enrollments': { title: 'enrollments Collection', desc: 'Stores booking form submissions. Fields: parentName, email, contactNumber, childName, childClass, schoolName, homeAddress, preferredShift, specialInstructions. Deleted after admin approves.' },
+  'db-payments': { title: 'payments Collection', desc: 'Fee payment records. Fields: parentId (relation), amount, status (Pending/Paid/Rejected/PendingAdminApproval), month, paymentMethod, receiptUrl. Admin approves/rejects.' },
+  'db-vans': { title: 'vans Collection', desc: 'Fleet management. Fields: vanId, driverName, driverPhone, licensePlate, capacity, status (Active/Inactive/Maintenance). Used in van assignment and tracking.' },
+  'db-gps': { title: 'gpsLocations Collection', desc: 'Designed for real-time GPS data. Fields: vanId, latitude, longitude, speed, timestamp. Needs hardware GPS tracker (Teltonika FMB920 ~Rs 10,000) to POST data here every 10-30 seconds.' },
+  'db-accounting': { title: 'income_records + vehicle_expenses', desc: 'Two custom collections for accounting. income_records: parentId, type, amount, month, paymentMethod, status. vehicle_expenses: vanId, category, amount, description, vendor, receiptNo.' },
+  'ext-smtp': { title: 'SMTP Email (Not Configured)', desc: 'PocketBase needs SMTP for: password reset emails, enrollment notification emails. Configure via: PocketBase admin → Settings → Mail → use Gmail with App Password or SendGrid free tier.' },
 };
 
 function showDetail(key) {
   const d = details[key];
   if (!d) return;
-  const panel = document.getElementById('detail-panel');
-  panel.innerHTML = `
-    <h2>${d.title}</h2>
-    <p>${d.desc}</p>
-    <div class="detail-grid">
-      ${d.items.map(i => `
-        <div class="detail-item">
-          <div class="detail-item-label">${i.label}</div>
-          <div class="detail-item-value">${i.value}</div>
-        </div>
-      `).join('')}
-    </div>
-  `;
-  document.querySelectorAll('.node').forEach(n => n.classList.remove('active-node'));
-  event.currentTarget.classList.add('active-node');
-  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  document.querySelectorAll('.node').forEach(n => n.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+  document.getElementById('detail-panel').innerHTML = 
+    `<h4>${d.title}</h4><p>${d.desc}</p>`;
 }
 </script>
 </body>
