@@ -1,0 +1,14 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// SafeRide Config Reference
+//
+// NOTE: PocketBase hook files run in ISOLATED scopes.
+// Variables defined here are NOT available in other hook files.
+//
+// Each hook file is fully self-contained with its own copy of
+// SAFERIDE config and helper functions at the top of the file.
+//
+// To update contact details: edit the SAFERIDE object in EACH hook file,
+// or use Find & Replace in VS Code:
+//   Ctrl+Shift+H → search "+92 300 XXXXXXX" → replace with real number
+//   Check "Search in all files" checkbox
+// ─────────────────────────────────────────────────────────────────────────────

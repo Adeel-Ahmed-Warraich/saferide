@@ -97,6 +97,7 @@ const AccountingPage = () => {
   const [income, setIncome] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [parents, setParents] = useState([]);
+  const [approvedEnrollments, setApprovedEnrollments] = useState([]);
   const [vans, setVans] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -111,6 +112,7 @@ const AccountingPage = () => {
 
   const [incomeForm, setIncomeForm] = useState({
     parentId: "",
+    childLabel: "",
     type: "Monthly Fee",
     amount: "",
     month: "",
@@ -147,7 +149,7 @@ const AccountingPage = () => {
 
   const fetchAll = async () => {
     setLoading(true);
-    const [incomeRes, expenseRes, parentsRes, vansRes] = await Promise.all([
+    const [incomeRes, expenseRes, parentsRes, vansRes, approvedEnrollRes] = await Promise.all([
       safeFetch(
         () =>
           pb
@@ -178,11 +180,19 @@ const AccountingPage = () => {
         () => pb.collection("vans").getList(1, 100, { $autoCancel: false }),
         "vans",
       ),
+      safeFetch(
+        () => pb.collection("enrollments").getList(1, 500, {
+          filter: 'status = "approved"',
+          $autoCancel: false,
+        }),
+        "approvedEnrollments",
+      ),
     ]);
     setIncome(incomeRes.items);
     setExpenses(expenseRes.items);
     setParents(parentsRes.items);
     setVans(vansRes.items);
+    setApprovedEnrollments(approvedEnrollRes.items);
     setLoading(false);
   };
 
@@ -321,6 +331,7 @@ const AccountingPage = () => {
   const resetIncomeForm = () =>
     setIncomeForm({
       parentId: "",
+      childLabel: "",
       type: "Monthly Fee",
       amount: "",
       month: "",
@@ -346,6 +357,7 @@ const AccountingPage = () => {
     setEditingIncome(record);
     setIncomeForm({
       parentId: record.parentId || "",
+      childLabel: record.childLabel || "",
       type: record.type || "Monthly Fee",
       amount: record.amount || "",
       month: record.month || "",
@@ -480,21 +492,33 @@ const AccountingPage = () => {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
-                <Label>Student / Parent</Label>
+                <Label>Student / Child</Label>
                 <select
-                  value={incomeForm.parentId}
-                  onChange={(e) =>
-                    setIncomeForm((p) => ({ ...p, parentId: e.target.value }))
-                  }
+                  value={incomeForm.parentId + "||" + incomeForm.childLabel}
+                  onChange={(e) => {
+                    const [pid, clabel] = e.target.value.split("||");
+                    setIncomeForm((p) => ({ ...p, parentId: pid, childLabel: clabel }));
+                  }}
                   className="mt-1.5 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">— Select Parent —</option>
+                  <option value="||">— Select Child —</option>
                   {parents.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.fullName} — {p.childName}
+                    <option key={p.id} value={`${p.id}||${p.childName}`}>
+                      {p.childName} ({p.childClass}) — {p.fullName}
                     </option>
                   ))}
+                  {approvedEnrollments.map((e) => {
+                    const parent = parents.find(p => p.email === e.email);
+                    return (
+                      <option key={e.id} value={`${parent?.id || ""}||${e.childName}`}>
+                        {e.childName} ({e.childClass}) — {e.parentName} [2nd child]
+                      </option>
+                    );
+                  })}
                 </select>
+                {incomeForm.childLabel && (
+                  <p className="text-xs text-blue-600 mt-1">Recording fee for: <strong>{incomeForm.childLabel}</strong></p>
+                )}
               </div>
               <div>
                 <Label>Payment Type</Label>
@@ -927,87 +951,84 @@ const AccountingPage = () => {
               <p className="text-sm text-gray-400 text-center py-4">
                 No parents registered yet
               </p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-gray-50 border-b">
-                      <th className="p-3 text-left font-semibold text-gray-600">
-                        Student
-                      </th>
-                      <th className="p-3 text-left font-semibold text-gray-600 hidden sm:table-cell">
-                        Parent
-                      </th>
-                      <th className="p-3 text-right font-semibold text-gray-600">
-                        Paid
-                      </th>
-                      <th className="p-3 text-right font-semibold text-gray-600">
-                        Pending
-                      </th>
-                      <th className="p-3 text-center font-semibold text-gray-600">
-                        Last Payment
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {parents.map((parent) => {
-                      const pIncome = income.filter(
-                        (i) => i.parentId === parent.id,
-                      );
-                      const paid = pIncome
-                        .filter((i) => i.status === "Received")
-                        .reduce((s, i) => s + Number(i.amount || 0), 0);
-                      const pending = pIncome
-                        .filter((i) => i.status === "Pending")
-                        .reduce((s, i) => s + Number(i.amount || 0), 0);
-                      const last = pIncome
-                        .filter((i) => i.status === "Received")
-                        .sort(
-                          (a, b) =>
-                            new Date(b.receivedDate) - new Date(a.receivedDate),
-                        )[0];
-                      return (
-                        <tr
-                          key={parent.id}
-                          className="border-b hover:bg-gray-50 transition-colors"
-                        >
-                          <td className="p-3">
-                            <div className="font-semibold text-gray-900">
-                              {parent.childName}
-                            </div>
-                            <div className="text-xs text-gray-400">
-                              {parent.childClass} — {parent.schoolName}
-                            </div>
-                          </td>
-                          <td className="p-3 hidden sm:table-cell text-gray-600">
-                            {parent.fullName}
-                          </td>
-                          <td className="p-3 text-right font-bold text-green-700">
-                            {fmt(paid)}
-                          </td>
-                          <td className="p-3 text-right font-bold text-red-500">
-                            {pending > 0 ? (
-                              fmt(pending)
-                            ) : (
-                              <span className="text-gray-300">—</span>
-                            )}
-                          </td>
-                          <td className="p-3 text-center text-xs text-gray-500">
-                            {last ? (
-                              new Date(last.receivedDate).toLocaleDateString(
-                                "en-PK",
-                              )
-                            ) : (
-                              <span className="text-gray-300">None</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            ) : (() => {
+              // Build unified list: first child from parents + second children from approvedEnrollments
+              const allChildren = [
+                ...parents.map(p => ({
+                  id: p.id,
+                  childName: p.childName,
+                  childClass: p.childClass,
+                  schoolName: p.schoolName,
+                  parentName: p.fullName,
+                  parentId: p.id,
+                  childLabel: p.childName,
+                  isSecond: false,
+                })),
+                ...approvedEnrollments.map(e => {
+                  const parent = parents.find(p => p.email === e.email);
+                  return {
+                    id: e.id,
+                    childName: e.childName,
+                    childClass: e.childClass,
+                    schoolName: e.schoolName,
+                    parentName: e.parentName,
+                    parentId: parent?.id || '',
+                    childLabel: e.childName,
+                    isSecond: true,
+                  };
+                }),
+              ];
+              return (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-50 border-b">
+                        <th className="p-3 text-left font-semibold text-gray-600">Student</th>
+                        <th className="p-3 text-left font-semibold text-gray-600 hidden sm:table-cell">Parent</th>
+                        <th className="p-3 text-right font-semibold text-gray-600">Paid</th>
+                        <th className="p-3 text-right font-semibold text-gray-600">Pending</th>
+                        <th className="p-3 text-center font-semibold text-gray-600">Last Payment</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allChildren.map((child) => {
+                        const pIncome = income.filter(
+                          (i) => i.parentId === child.parentId && (!i.childLabel || i.childLabel === child.childLabel),
+                        );
+                        const paid = pIncome
+                          .filter((i) => i.status === "Received")
+                          .reduce((s, i) => s + Number(i.amount || 0), 0);
+                        const pending = pIncome
+                          .filter((i) => i.status === "Pending")
+                          .reduce((s, i) => s + Number(i.amount || 0), 0);
+                        const last = pIncome
+                          .filter((i) => i.status === "Received")
+                          .sort((a, b) => new Date(b.receivedDate) - new Date(a.receivedDate))[0];
+                        return (
+                          <tr key={child.id} className={`border-b hover:bg-gray-50 transition-colors ${child.isSecond ? 'bg-green-50/30' : ''}`}>
+                            <td className="p-3">
+                              <div className="font-semibold text-gray-900 flex items-center gap-1.5">
+                                {child.isSecond && <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block flex-shrink-0"></span>}
+                                {child.childName}
+                              </div>
+                              <div className="text-xs text-gray-400">{child.childClass} — {child.schoolName}</div>
+                            </td>
+                            <td className="p-3 hidden sm:table-cell text-gray-600">{child.parentName}</td>
+                            <td className="p-3 text-right font-bold text-green-700">{fmt(paid)}</td>
+                            <td className="p-3 text-right font-bold text-red-500">
+                              {pending > 0 ? fmt(pending) : <span className="text-gray-300">—</span>}
+                            </td>
+                            <td className="p-3 text-center text-xs text-gray-500">
+                              {last ? new Date(last.receivedDate).toLocaleDateString("en-PK") : <span className="text-gray-300">None</span>}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
           </div>
 
           {/* ── Tabs: Income & Expenses ── */}
@@ -1111,7 +1132,7 @@ const AccountingPage = () => {
                           >
                             <td className="p-3">
                               <div className="font-semibold text-gray-900">
-                                {r.expand?.parentId?.childName || "—"}
+                                {r.childLabel || r.expand?.parentId?.childName || "—"}
                               </div>
                               <div className="text-xs text-gray-400">
                                 {r.expand?.parentId?.fullName || r.parentId}

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import pb from '@/lib/pocketbaseClient.js';
@@ -100,6 +99,7 @@ const PaymentHistoryPage = () => {
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-100">
                       <th className="p-4 font-semibold text-gray-600">Date</th>
+                      <th className="p-4 font-semibold text-gray-600">Child</th>
                       <th className="p-4 font-semibold text-gray-600">Amount</th>
                       <th className="p-4 font-semibold text-gray-600">Method</th>
                       <th className="p-4 font-semibold text-gray-600">Status</th>
@@ -110,6 +110,7 @@ const PaymentHistoryPage = () => {
                     {payments.map((payment) => (
                       <tr key={payment.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
                         <td className="p-4 text-gray-800">{new Date(payment.created).toLocaleDateString()}</td>
+                        <td className="p-4 text-gray-700 font-medium">{payment.childLabel || currentUser.childName || '—'}</td>
                         <td className="p-4 font-medium text-gray-900">Rs. {payment.amount}</td>
                         <td className="p-4 text-gray-600">{payment.paymentMethod}</td>
                         <td className="p-4">

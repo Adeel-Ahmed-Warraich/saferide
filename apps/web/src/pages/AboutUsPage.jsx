@@ -4,9 +4,10 @@ import { Helmet } from 'react-helmet';
 import { Shield, Eye, Heart, Users, Star } from 'lucide-react';
 
 const AboutUsPage = () => {
-  const suzukiYellow1 = 'https://horizons-cdn.hostinger.com/d8f47466-a099-49c5-abf3-3dbc56b09153/fe08b6c5a97435f5709308f3c15873ff.jpg';
-  const suzukiYellow2 = 'https://horizons-cdn.hostinger.com/d8f47466-a099-49c5-abf3-3dbc56b09153/409dd103546d3f8131829eafeab2c463.jpg';
-  const changanWhite = 'https://horizons-cdn.hostinger.com/d8f47466-a099-49c5-abf3-3dbc56b09153/8c16c985500a5fe2d242333e2c1e0e48.jpg';
+  const suzukiYellow1 = '/Japanese_mini_van_similar_t-0.jpg';
+  const suzukiYellow2 = '/Suzuki_Every_school_van_in_Pakistan-0.jpg';
+  const changanWhite = '/white_compact_Japanese_mini_va-0.jpg';
+    const gpsTrackingImg = '/parent_holding_a_smartphone_showing_live_GPS_track-0.jpg';
 
   const safetyFeatures = [
     {
@@ -132,8 +133,8 @@ const AboutUsPage = () => {
               <div className="bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col sm:flex-row">
                 <div className="sm:w-2/5 h-56 sm:h-auto">
                   <img 
-                    src={changanWhite} 
-                    alt="SafeRide Changan Karavan" 
+                    src={gpsTrackingImg} 
+                    alt="SafeRide GPS Tracking" 
                     className="w-full h-full object-cover"
                   />
                 </div>

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useNavigate, Link } from 'react-router-dom';
+import ChangePasswordModal from '@/components/ChangePasswordModal.jsx';
 
 // ─── Add/Edit Parent Modal ────────────────────────────────────────────────────
 const ParentModal = ({ parent, onClose, onSave }) => {
@@ -230,6 +231,7 @@ const AdminDashboard = () => {
   const [searchParent, setSearchParent] = useState('');
   const [searchPayment, setSearchPayment] = useState('');
   const [enrollments, setEnrollments] = useState([]);
+  const [approvedEnrollments, setApprovedEnrollments] = useState([]); // second children
   const [searchEnrollment, setSearchEnrollment] = useState('');
   const [approvingId, setApprovingId] = useState(null);
 
@@ -237,11 +239,13 @@ const AdminDashboard = () => {
   const [editingParent, setEditingParent] = useState(null);
   const [showVanModal, setShowVanModal] = useState(false);
   const [editingVan, setEditingVan] = useState(null);
+  const [showChangePassword, setShowChangePassword] = useState(false);
 
   // Notification Form State
   const [notifTitle, setNotifTitle] = useState('');
   const [notifMsg, setNotifMsg] = useState('');
   const [notifLoading, setNotifLoading] = useState(false);
+  const [sentNotifications, setSentNotifications] = useState([]);
 
   useEffect(() => { fetchData(); }, []);
 
@@ -262,7 +266,7 @@ const AdminDashboard = () => {
     const token = pb.authStore.token;
     const headers = token ? { 'Authorization': token } : {};
 
-    const [parentsRes, paymentsRes, vansRes, enrollmentsRes] = await Promise.all([
+    const [parentsRes, paymentsRes, vansRes, enrollmentsRes, approvedEnrollmentsRes, notifRes] = await Promise.all([
       safeFetch(() => pb.collection('parents').getList(1, 500, {
         $autoCancel: false,
         headers,
@@ -279,66 +283,157 @@ const AdminDashboard = () => {
       }), 'vans'),
       safeFetch(() => pb.collection('enrollments').getList(1, 500, {
         sort: '-created',
+        filter: 'status != "approved" && status != "rejected"',
         $autoCancel: false,
         headers,
       }), 'enrollments'),
+      safeFetch(() => pb.collection('enrollments').getList(1, 500, {
+        sort: '-created',
+        filter: 'status = "approved"',
+        $autoCancel: false,
+        headers,
+      }), 'approvedEnrollments'),
+      safeFetch(() => pb.collection('notifications').getList(1, 100, {
+        sort: '-created',
+        $autoCancel: false,
+        headers,
+      }), 'notifications'),
     ]);
 
     setParents(parentsRes.items);
     setPayments(paymentsRes.items);
     setVans(vansRes.items);
     setEnrollments(enrollmentsRes.items);
+    setApprovedEnrollments(approvedEnrollmentsRes.items);
+    setSentNotifications(notifRes.items);
     setLoading(false);
   };
 
   const handleApproveEnrollment = async (enrollment) => {
     setApprovingId(enrollment.id);
+
+    const defaultPassword = enrollment.contactNumber
+      ? enrollment.contactNumber.replace(/\s/g, '').slice(-8) + 'SR!'
+      : 'SafeRide@123';
+
+    // ── Step 1: Check if parent account already exists ──────────────────────
+    let existingParent = null;
     try {
-      // Generate a default password from their phone number or a default
-      const defaultPassword = enrollment.contactNumber
-        ? enrollment.contactNumber.replace(/\s/g, '').slice(-8) + 'SR!'
-        : 'SafeRide@123';
+      const existing = await pb.collection('parents').getList(1, 1, {
+        filter: `email="${enrollment.email}"`,
+        $autoCancel: false,
+      });
+      if (existing.items.length > 0) existingParent = existing.items[0];
+    } catch (err) {
+      console.warn('[approve] Could not check existing parents:', err.message);
+    }
 
-      // Create a parent auth account from the enrollment data
+    // ── Step 2a: EXISTING PARENT — second child scenario ────────────────────
+    if (existingParent) {
+      // Update parent status to Active
+      let updateOk = false;
+      try {
+        await pb.collection('parents').update(existingParent.id, {
+          enrollmentStatus: 'Active',
+        }, { $autoCancel: false });
+        updateOk = true;
+      } catch (err) {
+        console.error('[approve] Parent update failed:', err);
+        toast({
+          title: 'Update Failed — enrollment kept',
+          description: `Could not update parent: ${err.message}`,
+          variant: 'destructive',
+        });
+        setApprovingId(null);
+        return;
+      }
+
+      // Mark enrollment as approved (NOT deleted) so parent dashboard shows this child
+      if (updateOk) {
+        try {
+          await pb.collection('enrollments').update(enrollment.id, {
+            status: 'approved',
+          }, { $autoCancel: false });
+        } catch (err) {
+          console.warn('[approve] Could not mark enrollment approved:', err.message);
+        }
+        toast({
+          title: '✓ Second Child Approved',
+          description: `${enrollment.childName} (${enrollment.childClass}) approved under ${enrollment.email}'s account.`,
+        });
+        fetchData();
+      }
+
+      setApprovingId(null);
+      return;
+    }
+
+    // ── Step 2b: NEW PARENT — create account ────────────────────────────────
+    let createOk = false;
+    try {
       await pb.collection('parents').create({
-        email: enrollment.email,
-        password: defaultPassword,
-        passwordConfirm: defaultPassword,
-        emailVisibility: true,
-        fullName: enrollment.parentName,
-        phoneNumber: enrollment.contactNumber,
-        childName: enrollment.childName,
-        childClass: enrollment.childClass,
-        schoolName: enrollment.schoolName,
-        homeAddress: enrollment.homeAddress,
-        preferredShift: enrollment.preferredShift,
-        enrollmentStatus: 'Active',
+        email:               enrollment.email,
+        password:            defaultPassword,
+        passwordConfirm:     defaultPassword,
+        emailVisibility:     true,
+        fullName:            enrollment.parentName,
+        phoneNumber:         enrollment.contactNumber,
+        childName:           enrollment.childName,
+        childClass:          enrollment.childClass,
+        schoolName:          enrollment.schoolName,
+        homeAddress:         enrollment.homeAddress,
+        preferredShift:      enrollment.preferredShift,
+        specialInstructions: enrollment.specialInstructions || '',
+        enrollmentStatus:    'Active',
       }, { $autoCancel: false });
+      createOk = true;
+    } catch (err) {
+      console.error('[approve] Parent create failed:', err, err?.data);
+      // If email conflict means parent actually exists (race condition), fetch again
+      if (err?.data?.email?.code === 'validation_not_unique') {
+        toast({
+          title: 'Email Already Exists',
+          description: `A parent with ${enrollment.email} already exists. Refresh and try again.`,
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Create Failed — enrollment kept',
+          description: err.message || 'Unknown error. Check browser console for details.',
+          variant: 'destructive',
+        });
+      }
+      setApprovingId(null);
+      return; // ← stop here, do NOT delete enrollment
+    }
 
-      // Delete the enrollment record now that it's been converted
-      await pb.collection('enrollments').delete(enrollment.id, { $autoCancel: false });
-
+    // Only delete enrollment if create succeeded
+    if (createOk) {
+      try {
+        await pb.collection('enrollments').delete(enrollment.id, { $autoCancel: false });
+      } catch (err) {
+        console.warn('[approve] Could not delete enrollment after create:', err.message);
+      }
       toast({
         title: '✓ Parent Account Created',
-        description: `Login: ${enrollment.email} | Password: ${defaultPassword}`,
+        description: `Login: ${enrollment.email} · Password: ${defaultPassword}`,
       });
       fetchData();
-    } catch (err) {
-      if (err.message?.includes('email') || err.data?.email) {
-        toast({ title: 'Account already exists', description: `A parent with email ${enrollment.email} already has an account.`, variant: 'destructive' });
-      } else {
-        toast({ title: 'Error creating account', description: err.message, variant: 'destructive' });
-      }
-    } finally {
-      setApprovingId(null);
     }
+
+    setApprovingId(null);
   };
 
   const handleRejectEnrollment = async (id) => {
-    if (!confirm('Delete this enrollment request?')) return;
+    if (!confirm('Reject this enrollment request? The applicant will be notified by email.')) return;
     try {
-      await pb.collection('enrollments').delete(id, { $autoCancel: false });
-      toast({ title: 'Enrollment deleted' });
+      // Set status = rejected FIRST so the pb_hook can send the rejection email
+      await pb.collection('enrollments').update(id, { status: 'rejected' }, { $autoCancel: false });
+      // Then delete after a short delay to allow hook to fire
+      setTimeout(async () => {
+        try { await pb.collection('enrollments').delete(id, { $autoCancel: false }); } catch (_) {}
+      }, 2000);
+      toast({ title: 'Enrollment rejected — applicant will be notified by email' });
       fetchData();
     } catch (e) { toast({ title: 'Error', variant: 'destructive' }); }
   };
@@ -517,6 +612,7 @@ const AdminDashboard = () => {
           onSave={fetchData}
         />
       )}
+      {showChangePassword && <ChangePasswordModal onClose={() => setShowChangePassword(false)} />}
 
       <div className="min-h-screen bg-gray-100">
         {/* Top Bar */}
@@ -531,6 +627,9 @@ const AdminDashboard = () => {
                 📊 Accounting
               </Button>
             </Link>
+            <Button onClick={() => setShowChangePassword(true)} variant="ghost" size="sm" className="text-white hover:bg-blue-800 border border-blue-700">
+              🔑 Change Password
+            </Button>
             <Button onClick={handleLogout} variant="ghost" size="sm" className="text-white hover:bg-blue-800 border border-blue-700">
               <LogOut className="w-4 h-4 mr-2" /> Logout
             </Button>
@@ -583,9 +682,9 @@ const AdminDashboard = () => {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5 gap-3">
                 <div>
                   <h2 className="text-xl font-bold text-blue-900 flex items-center gap-2">
-                    <ClipboardList className="w-5 h-5" /> New Enrollment Requests ({enrollments.length})
+                    <ClipboardList className="w-5 h-5" /> Pending Enrollment Requests ({enrollments.length})
                   </h2>
-                  <p className="text-sm text-gray-500 mt-1">These are booking form submissions. Click "Approve" to create a parent login account.</p>
+                  <p className="text-sm text-gray-500 mt-1">These are booking form submissions awaiting review. Approved and rejected records are hidden.</p>
                 </div>
                 <div className="relative w-full sm:w-60">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -672,7 +771,7 @@ const AdminDashboard = () => {
             {/* ── Parents Tab ──────────────────────────────────────────────────── */}
             <TabsContent value="parents" className="bg-white p-6 rounded-2xl shadow-sm">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5 gap-3">
-                <h2 className="text-xl font-bold text-blue-900 flex items-center gap-2"><Users className="w-5 h-5" /> Registered Parents ({parents.length})</h2>
+                <h2 className="text-xl font-bold text-blue-900 flex items-center gap-2"><Users className="w-5 h-5" /> Registered Parents ({parents.length}) · {parents.length + approvedEnrollments.length} Children Total</h2>
                 <div className="flex gap-2 w-full sm:w-auto">
                   <div className="relative flex-1 sm:flex-none">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -697,40 +796,54 @@ const AdminDashboard = () => {
                   <tbody>
                     {filteredParents.length === 0 ? (
                       <tr><td colSpan={5} className="p-8 text-center text-gray-400">No parents found</td></tr>
-                    ) : filteredParents.map(p => (
-                      <tr key={p.id} className="border-b hover:bg-gray-50/70 transition-colors">
-                        <td className="p-3">
-                          <div className="font-medium text-gray-900">{p.fullName}</div>
-                          <div className="text-xs text-gray-500">{p.email}</div>
-                        </td>
-                        <td className="p-3 hidden md:table-cell">
-                          <div className="text-gray-800">{p.childName} ({p.childClass})</div>
-                          <div className="text-xs text-gray-500">{p.schoolName}</div>
-                        </td>
-                        <td className="p-3 text-gray-600 hidden sm:table-cell">{p.phoneNumber}</td>
-                        <td className="p-3">
-                          <select
-                            value={p.enrollmentStatus}
-                            onChange={e => handleUpdateEnrollment(p.id, e.target.value)}
-                            className={`text-xs font-semibold rounded-full px-2 py-1 border-0 cursor-pointer focus:ring-2 focus:ring-blue-500 ${enrollmentColors[p.enrollmentStatus]?.bg || 'bg-gray-100'} ${enrollmentColors[p.enrollmentStatus]?.text || 'text-gray-700'}`}
-                          >
-                            <option value="Pending">Pending</option>
-                            <option value="Active">Active</option>
-                            <option value="Suspended">Suspended</option>
-                          </select>
-                        </td>
-                        <td className="p-3 text-right">
-                          <div className="flex justify-end gap-1">
-                            <button onClick={() => { setEditingParent(p); setShowParentModal(true); }} className="p-1.5 hover:bg-blue-50 rounded-lg text-blue-600 transition-colors" title="Edit">
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button onClick={() => handleDeleteParent(p.id)} className="p-1.5 hover:bg-red-50 rounded-lg text-red-500 transition-colors" title="Delete">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                    ) : filteredParents.map(p => {
+                      const siblings = approvedEnrollments.filter(e => e.email === p.email);
+                      return (
+                        <React.Fragment key={p.id}>
+                          <tr className="border-b hover:bg-gray-50/70 transition-colors">
+                            <td className="p-3">
+                              <div className="font-medium text-gray-900">{p.fullName}</div>
+                              <div className="text-xs text-gray-500">{p.email}</div>
+                            </td>
+                            <td className="p-3 hidden md:table-cell">
+                              <div className="text-gray-800 font-medium">{p.childName} ({p.childClass})</div>
+                              <div className="text-xs text-gray-500">{p.schoolName}</div>
+                              {siblings.map(s => (
+                                <div key={s.id} className="mt-1 pt-1 border-t border-dashed border-gray-200">
+                                  <div className="text-gray-700 text-xs flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"></span>
+                                    {s.childName} ({s.childClass})
+                                  </div>
+                                  <div className="text-xs text-gray-400">{s.schoolName} · {s.preferredShift}</div>
+                                </div>
+                              ))}
+                            </td>
+                            <td className="p-3 text-gray-600 hidden sm:table-cell">{p.phoneNumber}</td>
+                            <td className="p-3">
+                              <select
+                                value={p.enrollmentStatus}
+                                onChange={e => handleUpdateEnrollment(p.id, e.target.value)}
+                                className={`text-xs font-semibold rounded-full px-2 py-1 border-0 cursor-pointer focus:ring-2 focus:ring-blue-500 ${enrollmentColors[p.enrollmentStatus]?.bg || 'bg-gray-100'} ${enrollmentColors[p.enrollmentStatus]?.text || 'text-gray-700'}`}
+                              >
+                                <option value="Pending">Pending</option>
+                                <option value="Active">Active</option>
+                                <option value="Suspended">Suspended</option>
+                              </select>
+                            </td>
+                            <td className="p-3 text-right">
+                              <div className="flex justify-end gap-1">
+                                <button onClick={() => { setEditingParent(p); setShowParentModal(true); }} className="p-1.5 hover:bg-blue-50 rounded-lg text-blue-600 transition-colors" title="Edit">
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button onClick={() => handleDeleteParent(p.id)} className="p-1.5 hover:bg-red-50 rounded-lg text-red-500 transition-colors" title="Delete">
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        </React.Fragment>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -868,6 +981,45 @@ const AdminDashboard = () => {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Sent Notifications History */}
+              <div className="mt-10 border-t pt-8">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <CheckCircle2 className="w-5 h-5 text-green-600" />
+                  Sent Notifications ({sentNotifications.length})
+                </h3>
+                {sentNotifications.length === 0 ? (
+                  <div className="text-center py-10 text-gray-400">
+                    <Bell className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                    <p className="text-sm">No notifications sent yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {sentNotifications.map(n => (
+                      <div key={n.id} className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                        <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-sm
+                          ${n.type === 'Broadcast' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                          {n.type === 'Broadcast' ? '📢' : '🔔'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-semibold text-gray-900 text-sm">{n.title}</p>
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium
+                              ${n.type === 'Broadcast' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+                              {n.type}
+                            </span>
+                            {!n.parentId && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">All Parents</span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600 mt-1 line-clamp-2">{n.message}</p>
+                          <p className="text-xs text-gray-400 mt-1">{new Date(n.created).toLocaleString()}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </TabsContent>
 
