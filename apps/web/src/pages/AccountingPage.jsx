@@ -992,9 +992,17 @@ const AccountingPage = () => {
                     </thead>
                     <tbody>
                       {allChildren.map((child) => {
-                        const pIncome = income.filter(
-                          (i) => i.parentId === child.parentId && (!i.childLabel || i.childLabel === child.childLabel),
-                        );
+                        const pIncome = income.filter((i) => {
+                          if (i.parentId !== child.parentId) return false;
+                          const label = (i.childLabel || '').trim();
+                          if (child.isSecond) {
+                            // Second child: only count records explicitly labelled with this child's name
+                            return label === child.childLabel;
+                          } else {
+                            // Primary child: count records with no label OR labelled with this child's name
+                            return !label || label === child.childLabel;
+                          }
+                        });
                         const paid = pIncome
                           .filter((i) => i.status === "Received")
                           .reduce((s, i) => s + Number(i.amount || 0), 0);
