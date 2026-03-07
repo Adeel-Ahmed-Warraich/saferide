@@ -1,63 +1,52 @@
+/**
+ * web/src/components/ChatbotWidget.jsx
+ *
+ * Calls /api/chat (relative URL — works in both dev and production):
+ *   Dev:        Vite proxy (vite.config.js) forwards /api/* → Express :8090
+ *   Production: same origin, Express handles /api/* directly
+ *
+ * No VITE_API_URL needed anywhere.
+ */
+
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, MinusCircle, Bot, Loader2 } from 'lucide-react';
-
-const SYSTEM_PROMPT = `You are SafeRide Assistant, a helpful and friendly customer service chatbot for SafeRide — a school transport service in Lake City, Lahore, Pakistan.
-
-Key information about SafeRide:
-- Service: School pick & drop for children in Lake City area and nearby schools within ~4 km
-- Morning shift: 7:00 AM – 8:30 AM | Afternoon shift: 2:00 PM – 4:00 PM
-- Vehicles: Suzuki Every vans and Changan Karavan; limited seats (7-8 students max)
-- Drivers: Police-verified, background-checked, defensively trained
-- Features: GPS real-time tracking, parent dashboard, push notifications
-- Payments: Easypaisa, JazzCash, Bank Deposit via the parent dashboard
-- Monthly fees vary by distance; parents can check their dashboard
-- Contact: +92 300 1234567 | info@saferide.com.pk | WhatsApp: wa.me/923001234567
-- To enroll: Visit /book or click "Book Now" on the website
-- Parent login: /login | Password reset: /password-reset
-
-Guidelines:
-- Be warm, concise, and professional
-- Answer only what's relevant to SafeRide services
-- For emergencies, always provide the phone number: +92 300 1234567
-- If you can't answer, suggest calling or WhatsApp
-- Keep replies short (2-4 sentences max)
-- Respond in English; if user writes in Urdu, respond in Urdu`;
+import { useChatbot } from '@/contexts/ChatbotContext.jsx';
 
 const ChatbotWidget = () => {
-  const [isOpen, setIsOpen] = useState(false);
+  const { setChatbotOpener } = useChatbot();
+
+  const [isOpen,      setIsOpen]      = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [messages, setMessages] = useState([
-    { text: "Hi! I'm the SafeRide AI Assistant. How can I help you today?", isBot: true }
+  const [messages,    setMessages]    = useState([
+    { text: "Hi! I'm the SafeRide AI Assistant. How can I help you today?", isBot: true },
   ]);
-  const [input, setInput] = useState('');
+  const [input,     setInput]     = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
+  // Register opener with ChatbotContext so ParentDashboard can call openChatbot()
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, isOpen, isMinimized]);
+    setChatbotOpener(setIsOpen);
+  }, [setChatbotOpener]);
 
+  const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  useEffect(() => { scrollToBottom(); }, [messages, isOpen, isMinimized]);
+
+  // Always use a relative URL — Vite proxy handles dev, same origin handles prod
   const callClaudeAPI = async (conversationHistory) => {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        system: SYSTEM_PROMPT,
-        messages: conversationHistory,
-      }),
+    const response = await fetch('/api/chat', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ messages: conversationHistory }),
     });
 
-    if (!response.ok) throw new Error('API request failed');
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || `Server error ${response.status}`);
+    }
+
     const data = await response.json();
-    return data.content[0]?.text || "I'm sorry, I couldn't process that. Please call us at +92 300 1234567.";
+    return data.reply || "I'm sorry, I couldn't process that. Please call us at +92 300 1234567.";
   };
 
   const handleSend = async (e) => {
@@ -70,18 +59,18 @@ const ChatbotWidget = () => {
     setIsLoading(true);
 
     try {
-      // Build conversation history for Claude (skip the initial greeting)
       const history = messages
-        .slice(1) // skip welcome message
+        .slice(1)
         .map(m => ({ role: m.isBot ? 'assistant' : 'user', content: m.text }));
       history.push({ role: 'user', content: userMsg });
 
       const reply = await callClaudeAPI(history);
       setMessages(prev => [...prev, { text: reply, isBot: true }]);
     } catch (err) {
+      console.error('[ChatbotWidget] API error:', err.message);
       setMessages(prev => [...prev, {
         text: "I'm having trouble connecting right now. Please call us at +92 300 1234567 or WhatsApp us for immediate help.",
-        isBot: true
+        isBot: true,
       }]);
     } finally {
       setIsLoading(false);
@@ -89,15 +78,14 @@ const ChatbotWidget = () => {
   };
 
   const renderMessage = (text) => {
-    // Convert WhatsApp links
-    const waRegex = /(wa\.me\/\d+|https?:\/\/wa\.me\/\d+)/g;
+    const waRegex    = /(wa\.me\/\d+|https?:\/\/wa\.me\/\d+)/g;
     const phoneRegex = /(\+92\s?\d{3}\s?\d{7})/g;
 
     return text.split('\n').map((line, i) => (
       <span key={i}>
         {line.split(/(wa\.me\/\d+|https?:\/\/wa\.me\/\d+|\+92\s?\d{3}\s?\d{7})/g).map((part, j) => {
           if (waRegex.test(part) || part.startsWith('wa.me')) {
-            return <a key={j} href={`https://wa.me/923001234567`} target="_blank" rel="noopener noreferrer" className="underline font-bold text-yellow-400">WhatsApp us</a>;
+            return <a key={j} href="https://wa.me/923001234567" target="_blank" rel="noopener noreferrer" className="underline font-bold text-yellow-400">WhatsApp us</a>;
           }
           if (phoneRegex.test(part)) {
             return <a key={j} href={`tel:${part.replace(/\s/g, '')}`} className="underline font-bold text-yellow-400">{part}</a>;
@@ -117,20 +105,26 @@ const ChatbotWidget = () => {
         title="Chat with SafeRide AI"
       >
         <MessageCircle className="w-7 h-7 group-hover:hidden" />
-        <Bot className="w-7 h-7 hidden group-hover:block" />
-        <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white animate-pulse"></span>
+        <Bot           className="w-7 h-7 hidden group-hover:block" />
+        <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white animate-pulse" />
       </button>
     );
   }
 
   return (
-    <div className={`fixed right-6 z-50 transition-all duration-300 ease-in-out ${isMinimized ? 'bottom-6 h-14 w-72' : 'bottom-6 h-[500px] w-80 sm:w-96'} bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden`}>
+    <div className={`fixed right-6 z-50 transition-all duration-300 ease-in-out ${
+      isMinimized ? 'bottom-6 h-14 w-72' : 'bottom-6 h-[500px] w-80 sm:w-96'
+    } bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden`}>
+
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-800 to-blue-900 text-white p-4 flex justify-between items-center cursor-pointer" onClick={() => setIsMinimized(!isMinimized)}>
+      <div
+        className="bg-gradient-to-r from-blue-800 to-blue-900 text-white p-4 flex justify-between items-center cursor-pointer"
+        onClick={() => setIsMinimized(v => !v)}
+      >
         <div className="flex items-center gap-2">
           <div className="relative">
             <Bot className="w-5 h-5" />
-            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 rounded-full border border-blue-800"></span>
+            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 rounded-full border border-blue-800" />
           </div>
           <div>
             <span className="font-semibold text-sm">SafeRide AI Assistant</span>
@@ -138,7 +132,7 @@ const ChatbotWidget = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={(e) => { e.stopPropagation(); setIsMinimized(!isMinimized); }} className="hover:text-gray-300 transition-colors p-1">
+          <button onClick={(e) => { e.stopPropagation(); setIsMinimized(v => !v); }} className="hover:text-gray-300 transition-colors p-1">
             <MinusCircle className="w-5 h-5" />
           </button>
           <button onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} className="hover:text-gray-300 transition-colors p-1">
@@ -175,9 +169,9 @@ const ChatbotWidget = () => {
                 </div>
                 <div className="bg-white border border-gray-200 rounded-2xl rounded-tl-none p-3 shadow-sm">
                   <div className="flex items-center gap-1">
-                    <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                    <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                    <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                    <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                   </div>
                 </div>
               </div>
@@ -185,13 +179,12 @@ const ChatbotWidget = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Quick Suggestions */}
           {messages.length === 1 && (
-            <div className="px-3 pb-2 bg-gray-50 flex gap-2 overflow-x-auto scrollbar-hide">
+            <div className="px-3 pb-2 bg-gray-50 flex gap-2 overflow-x-auto">
               {['Service hours?', 'How to enroll?', 'Payment methods?', 'GPS tracking?'].map(q => (
                 <button
                   key={q}
-                  onClick={() => { setInput(q); }}
+                  onClick={() => setInput(q)}
                   className="flex-shrink-0 text-xs bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-full px-3 py-1.5 transition-colors font-medium"
                 >
                   {q}
@@ -200,13 +193,12 @@ const ChatbotWidget = () => {
             </div>
           )}
 
-          {/* Input */}
           <div className="p-3 bg-white border-t border-gray-200">
             <form onSubmit={handleSend} className="flex gap-2">
               <input
                 type="text"
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={e => setInput(e.target.value)}
                 placeholder="Ask anything about SafeRide..."
                 disabled={isLoading}
                 className="flex-grow px-3 py-2 border border-gray-300 rounded-full text-sm focus:outline-none focus:border-blue-800 focus:ring-1 focus:ring-blue-800 disabled:opacity-60"

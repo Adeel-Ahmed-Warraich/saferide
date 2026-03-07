@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet';
 import pb from '@/lib/pocketbaseClient.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { useNotifications } from '@/contexts/NotificationContext.jsx';
+import { useNotifications, isNotifExpired } from '@/contexts/NotificationContext.jsx';
 import { Bell, CheckCircle2, AlertTriangle, CreditCard, Clock, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 
@@ -10,54 +10,53 @@ const NotificationsPage = () => {
   const { currentUser } = useAuth();
   const { refreshUnread } = useNotifications();
   const [notifications, setNotifications] = useState([]);
-  const [readIds, setReadIds] = useState(new Set()); // notificationIds this parent has read
+  const [readIds, setReadIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
 
   const fetchNotifications = useCallback(async () => {
     try {
-      // 1. Fetch all notifications for this parent (personal + broadcast)
-      const res = await pb.collection('notifications').getList(1, 100, {
-        filter: `parentId="${currentUser.id}" || parentId=""`,
-        sort: '-created',
-        $autoCancel: false,
-      });
-
-      // 2. Fetch which ones THIS parent has already read
-      const readsRes = await pb.collection('notification_reads').getList(1, 200, {
-        filter: `parentId="${currentUser.id}"`,
-        $autoCancel: false,
-      });
+      // FIX: use type="Broadcast" OR direct parentId — not the ambiguous parentId=""
+      const [res, readsRes] = await Promise.all([
+        pb.collection('notifications').getList(1, 200, {
+          filter: `type = "Broadcast" || parentId = "${currentUser.id}"`,
+          sort: '-created',
+          $autoCancel: false,
+        }),
+        pb.collection('notification_reads').getList(1, 500, {
+          filter: `parentId = "${currentUser.id}"`,
+          $autoCancel: false,
+        }),
+      ]);
 
       const myReadSet = new Set(readsRes.items.map(r => r.notificationId));
       setReadIds(myReadSet);
-      setNotifications(res.items);
+
+      // #8: Filter out expired notifications — new parents won't see old ones
+      const active = res.items.filter(n => !isNotifExpired(n));
+      setNotifications(active);
     } catch (error) {
-      console.error('fetchNotifications error:', error);
+      console.error('[SR] fetchNotifications error:', error);
     } finally {
       setLoading(false);
     }
   }, [currentUser.id]);
 
-  useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
+  useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
 
   const isRead = (notifId) => readIds.has(notifId);
 
   const markAsRead = async (notifId) => {
     if (isRead(notifId)) return;
     try {
-      // Create a read record for this parent+notification
       await pb.collection('notification_reads').create({
         parentId: currentUser.id,
         notificationId: notifId,
       }, { $autoCancel: false });
       setReadIds(prev => new Set([...prev, notifId]));
-      refreshUnread(); // instantly update header badge
+      refreshUnread();
     } catch (error) {
-      // Ignore duplicate error (already read)
       if (!error.message?.includes('unique')) {
-        console.error('markAsRead error:', error);
+        console.error('[SR] markAsRead error:', error);
       }
     }
   };
@@ -69,11 +68,11 @@ const NotificationsPage = () => {
 
   const getIcon = (type) => {
     switch (type) {
-      case 'FeeReminder':        return <CreditCard  className="w-6 h-6 text-yellow-500" />;
-      case 'PaymentConfirmation':return <CheckCircle2 className="w-6 h-6 text-green-500" />;
-      case 'PickupDelay':        return <Clock        className="w-6 h-6 text-orange-500" />;
-      case 'Emergency':          return <AlertTriangle className="w-6 h-6 text-red-500" />;
-      default:                   return <Bell         className="w-6 h-6 text-blue-500" />;
+      case 'FeeReminder':         return <CreditCard   className="w-5 h-5 text-yellow-500" />;
+      case 'PaymentConfirmation': return <CheckCircle2 className="w-5 h-5 text-green-500" />;
+      case 'PickupDelay':         return <Clock        className="w-5 h-5 text-orange-500" />;
+      case 'Emergency':           return <AlertTriangle className="w-5 h-5 text-red-500" />;
+      default:                    return <Bell         className="w-5 h-5 text-blue-500" />;
     }
   };
 
@@ -90,7 +89,7 @@ const NotificationsPage = () => {
               <Bell className="w-8 h-8 text-yellow-500" />
               Notifications
               {unreadCount > 0 && (
-                <span className="bg-red-500 text-white text-sm px-2 py-1 rounded-full ml-2">
+                <span className="bg-red-500 text-white text-sm px-2.5 py-1 rounded-full font-semibold">
                   {unreadCount} new
                 </span>
               )}
@@ -118,6 +117,9 @@ const NotificationsPage = () => {
             ) : (
               notifications.map((notif) => {
                 const read = isRead(notif.id);
+                const daysLeft = notif.expiresAt
+                  ? Math.ceil((new Date(notif.expiresAt) - new Date()) / 86400000)
+                  : null;
                 return (
                   <div key={notif.id}
                     className={`bg-white p-5 rounded-2xl shadow-sm border transition-all ${
@@ -133,8 +135,12 @@ const NotificationsPage = () => {
                             <h3 className={`font-bold ${read ? 'text-gray-600' : 'text-gray-900'}`}>
                               {notif.title}
                             </h3>
-                            {!read && (
-                              <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-1" />
+                            {!read && <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-1" />}
+                            {/* Expiry badge — only show if expiring within 3 days */}
+                            {daysLeft !== null && daysLeft <= 3 && daysLeft > 0 && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-medium">
+                                ⏳ Expires in {daysLeft}d
+                              </span>
                             )}
                           </div>
                           <span className="text-xs text-gray-400 whitespace-nowrap flex-shrink-0">

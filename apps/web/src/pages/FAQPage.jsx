@@ -171,7 +171,7 @@ const AccordionItem = ({ question, answer, isOpen, onToggle, color }) => {
         className={`w-full text-left px-5 py-4 flex items-start justify-between gap-4 transition-colors duration-200 ${isOpen ? c.bg : 'bg-white hover:bg-gray-50'}`}
       >
         <div className="flex items-start gap-3">
-          <span className={`mt-0.5 w-2 h-2 rounded-full flex-shrink-0 mt-2 ${isOpen ? c.dot : 'bg-gray-300'}`} />
+          <span className={`w-2 h-2 rounded-full flex-shrink-0 mt-2 ${isOpen ? c.dot : 'bg-gray-300'}`} />
           <span className={`text-sm font-semibold leading-relaxed ${isOpen ? 'text-gray-900' : 'text-gray-700'}`}>
             {question}
           </span>

@@ -1,9 +1,24 @@
 /// <reference path="../pb_data/types.d.ts" />
 
+/**
+ * api/pb_hooks/payment-status.pb.js
+ *
+ * FIXES applied:
+ *  #3  Uses e.record.get("childLabel") first for the receipt child name;
+ *      falls back to parent.get("childName") only when childLabel is blank.
+ *      This ensures second-child payments show the correct child on the receipt.
+ */
+
 onRecordAfterUpdateSuccess((e) => {
 
   function cfg() {
-    return { name: "SafeRide School Transport", phone: "+92 300 XXXXXXX", email: "support@saferide.com.pk", website: "https://saferide.com.pk", address: "Lake City, Lahore, Pakistan" };
+    return {
+      name:    "SafeRide School Transport",
+      phone:   "+92 300 1234567",
+      email:   "support@saferide.com.pk",
+      website: "https://saferide.com.pk",
+      address: "Lake City, Lahore, Pakistan",
+    };
   }
   function hdr(title, sub, bg) {
     bg = bg || "#1e40af";
@@ -25,23 +40,28 @@ onRecordAfterUpdateSuccess((e) => {
   var status = e.record.get("status") || "";
   if (status !== "Paid" && status !== "Rejected") { e.next(); return; }
 
-  var C       = cfg();
-  var amount  = e.record.get("amount")        || "0";
-  var month   = e.record.get("month")         || "";
-  var method  = e.record.get("paymentMethod") || "N/A";
-  var payId   = e.record.id;
+  var C         = cfg();
+  var amount    = e.record.get("amount")        || "0";
+  var month     = e.record.get("month")         || "";
+  var method    = e.record.get("paymentMethod") || "N/A";
+  var payId     = e.record.id;
   var receiptNo = payId.slice(-8).toUpperCase();
-  var payDate = new Date().toLocaleDateString("en-PK", { day: "2-digit", month: "long", year: "numeric" });
+  var payDate   = new Date().toLocaleDateString("en-PK", { day: "2-digit", month: "long", year: "numeric" });
 
   var parentEmail = "";
   var parentName  = "Parent";
-  var childName   = "";
+  // FIX #3 — prefer childLabel from the payment record (correct for 2nd child);
+  // fall back to parent.childName only when childLabel is absent.
+  var childName   = e.record.get("childLabel") || "";
 
   try {
     var parent = $app.findRecordById("parents", e.record.get("parentId"));
-    parentEmail = parent.get("email")     || "";
-    parentName  = parent.get("fullName")  || parent.get("name") || "Parent";
-    childName   = parent.get("childName") || "";
+    parentEmail = parent.get("email")    || "";
+    parentName  = parent.get("fullName") || parent.get("name") || "Parent";
+    // Only use parent's primary child if the payment has no childLabel
+    if (!childName) {
+      childName = parent.get("childName") || "";
+    }
   } catch (err) {
     console.error("[payment-status] Could not fetch parent:", err);
     e.next(); return;
@@ -49,6 +69,7 @@ onRecordAfterUpdateSuccess((e) => {
 
   if (!parentEmail) { e.next(); return; }
 
+  // ── Paid email ────────────────────────────────────────────────────────────
   if (status === "Paid") {
     try {
       var paidMail = new MailerMessage({
@@ -66,10 +87,11 @@ onRecordAfterUpdateSuccess((e) => {
           + row("Receipt No.", receiptNo,  false)
           + row("Date",        payDate,    true)
           + row("Parent",      parentName, false)
-          + row("Child",       childName,  true)
+          + row("Child",       childName,  true)   // FIX: now uses correct child name
           + row("Month",       month,      false)
           + row("Method",      method,     true)
-          + '<tr><td style="padding:10px 12px;color:#64748b;font-size:13px;border-top:2px solid #bbf7d0;">Amount Paid</td><td style="padding:10px 12px;font-weight:800;color:#15803d;font-size:20px;border-top:2px solid #bbf7d0;">Rs. ' + amount + '</td></tr>'
+          + '<tr><td style="padding:10px 12px;color:#64748b;font-size:13px;border-top:2px solid #bbf7d0;">Amount Paid</td>'
+          +     '<td style="padding:10px 12px;font-weight:800;color:#15803d;font-size:20px;border-top:2px solid #bbf7d0;">Rs. ' + amount + '</td></tr>'
           + '</table></div>'
           + '<div style="background:#15803d;padding:8px;text-align:center;"><p style="margin:0;color:#dcfce7;font-size:12px;">VERIFIED AND CONFIRMED BY SAFERIDE SCHOOL TRANSPORT</p></div>'
           + '</div>'
@@ -82,6 +104,7 @@ onRecordAfterUpdateSuccess((e) => {
     }
   }
 
+  // ── Rejected email ────────────────────────────────────────────────────────
   if (status === "Rejected") {
     try {
       var rejMail = new MailerMessage({
@@ -92,7 +115,9 @@ onRecordAfterUpdateSuccess((e) => {
           + hdr("Payment Verification Issue", "Regarding your " + month + " payment", "#d97706")
           + '<div style="background:#fff;padding:24px;border:1px solid #e2e8f0;">'
           + '<p style="color:#1e293b;margin:0 0 12px;">Dear <strong>' + parentName + '</strong>,</p>'
-          + '<p style="color:#475569;line-height:1.7;margin:0 0 16px;">We could not verify your payment of <strong>Rs. ' + amount + '</strong> for <strong>' + month + '</strong> via <strong>' + method + '</strong>.</p>'
+          + '<p style="color:#475569;line-height:1.7;margin:0 0 16px;">We could not verify your payment of <strong>Rs. ' + amount + '</strong>'
+          + (childName ? ' for <strong>' + childName + '</strong>' : '')
+          + ' for <strong>' + month + '</strong> via <strong>' + method + '</strong>.</p>'
           + '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px;margin-bottom:20px;">'
           + '<ul style="margin:0;padding-left:18px;color:#78350f;font-size:13px;line-height:2;">'
           + '<li>Receipt image is unclear or unreadable</li>'

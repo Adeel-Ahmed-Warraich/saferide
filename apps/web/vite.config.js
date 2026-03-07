@@ -7,6 +7,16 @@ export default defineConfig({
   server: {
     port: 3000,
     cors: true,
+    proxy: {
+      // Any request to /api/* in dev gets forwarded to the Express server.
+      // This means ChatbotWidget's fetch('/api/chat') works on both:
+      //   • Dev:        Vite (3000) → proxy → Express (8090) → Anthropic
+      //   • Production: same origin, no proxy needed at all
+      '/api': {
+        target: 'http://localhost:8090',
+        changeOrigin: true,
+      },
+    },
   },
   resolve: {
     extensions: ['.jsx', '.js', '.tsx', '.ts', '.json'],

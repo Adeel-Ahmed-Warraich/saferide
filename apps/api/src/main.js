@@ -5,7 +5,8 @@ import { fileURLToPath } from 'url';
 import express from 'express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import { config } from 'dotenv';
-config({ path: new URL('../.env', import.meta.url).pathname });
+import claudeProxy from './routes/claude-proxy.js';
+config();
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT      = join(__dirname, '..');
 const PB_BINARY = join(ROOT, 'pocketbase');
@@ -44,6 +45,13 @@ pb.on('close', (code) => {
 setTimeout(() => {
   const app = express();
 
+  // Body parser for our own API routes (must come before routes)
+  app.use(express.json({ limit: '50kb' }));
+
+  // Claude chatbot proxy — must be registered BEFORE the PocketBase catch-all
+  app.use('/api', claudeProxy);
+
+  // PocketBase catch-all proxy — handles everything else
   app.use('/', createProxyMiddleware({
     target:      `http://127.0.0.1:${PB_PORT}`,
     changeOrigin: true,
@@ -59,6 +67,7 @@ setTimeout(() => {
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
     console.log(`✅ Proxy running on port ${PORT} → PocketBase on ${PB_PORT}`);
+    console.log(`   Claude chat proxy: POST /api/chat ✓`);
   });
 }, 3000);
 

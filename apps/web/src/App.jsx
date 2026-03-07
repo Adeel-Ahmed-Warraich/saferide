@@ -8,7 +8,7 @@ import Header from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
 import ChatbotWidget from '@/components/ChatbotWidget.jsx';
 import { Toaster } from '@/components/ui/toaster.jsx';
-
+import { ChatbotProvider } from '@/contexts/ChatbotContext.jsx';
 // Pages
 import HomePage from '@/pages/HomePage.jsx';
 import AboutUsPage from '@/pages/AboutUsPage.jsx';
@@ -33,6 +33,7 @@ import FAQPage from "@/pages/FAQPage";
 
 function App() {
   return (
+    <ChatbotProvider>
     <AuthProvider>
       <NotificationProvider>
       <Router>
@@ -85,7 +86,7 @@ function App() {
         <Toaster />
       </Router>
     </NotificationProvider>
-    </AuthProvider>
+    </AuthProvider></ChatbotProvider>
   );
 }
 

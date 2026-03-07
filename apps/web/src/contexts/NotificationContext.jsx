@@ -10,6 +10,12 @@ export const useNotifications = () => {
   return ctx;
 };
 
+// Filter out expired notifications client-side (expiresAt is optional — null means never expires)
+export const isNotifExpired = (n) => {
+  if (!n.expiresAt) return false;
+  return new Date(n.expiresAt) < new Date();
+};
+
 export const NotificationProvider = ({ children }) => {
   const { isParent, currentUser } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
@@ -19,8 +25,9 @@ export const NotificationProvider = ({ children }) => {
     try {
       const [allRes, readsRes] = await Promise.all([
         pb.collection('notifications').getList(1, 200, {
-          filter: `parentId="${currentUser.id}" || parentId=""`,
-          fields: 'id',
+          // type=Broadcast OR direct to this parent
+          filter: `type = "Broadcast" || parentId = "${currentUser.id}"`,
+          fields: 'id,expiresAt',
           $autoCancel: false,
         }),
         pb.collection('notification_reads').getList(1, 200, {
@@ -30,8 +37,12 @@ export const NotificationProvider = ({ children }) => {
         }),
       ]);
       const readSet = new Set(readsRes.items.map(r => r.notificationId));
-      setUnreadCount(allRes.items.filter(n => !readSet.has(n.id)).length);
-    } catch (_) {}
+      // Exclude expired and already-read
+      const unread = allRes.items.filter(n => !readSet.has(n.id) && !isNotifExpired(n));
+      setUnreadCount(unread.length);
+    } catch (err) {
+      console.error('[SR] NotificationContext refreshUnread:', err);
+    }
   }, [isParent, currentUser?.id]);
 
   // Fetch on mount + every 60s
