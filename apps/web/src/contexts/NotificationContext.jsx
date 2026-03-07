@@ -10,7 +10,6 @@ export const useNotifications = () => {
   return ctx;
 };
 
-// Filter out expired notifications client-side (expiresAt is optional — null means never expires)
 export const isNotifExpired = (n) => {
   if (!n.expiresAt) return false;
   return new Date(n.expiresAt) < new Date();
@@ -23,29 +22,40 @@ export const NotificationProvider = ({ children }) => {
   const refreshUnread = useCallback(async () => {
     if (!isParent || !currentUser?.id) { setUnreadCount(0); return; }
     try {
-      const [allRes, readsRes] = await Promise.all([
+      // FIX: parentId="" caused PocketBase to issue a redirect which fails CORS preflight.
+      // Split into two separate queries and merge client-side instead.
+      const [broadcastRes, directRes, readsRes] = await Promise.all([
         pb.collection('notifications').getList(1, 200, {
-          // type=Broadcast OR direct to this parent
-          filter: `type = "Broadcast" || parentId = "${currentUser.id}"`,
+          filter: `type = "Broadcast"`,
           fields: 'id,expiresAt',
           $autoCancel: false,
-        }),
-        pb.collection('notification_reads').getList(1, 200, {
-          filter: `parentId="${currentUser.id}"`,
+        }).catch(() => ({ items: [] })),
+        pb.collection('notifications').getList(1, 200, {
+          filter: `parentId = "${currentUser.id}"`,
+          fields: 'id,expiresAt',
+          $autoCancel: false,
+        }).catch(() => ({ items: [] })),
+        pb.collection('notification_reads').getList(1, 500, {
+          filter: `parentId = "${currentUser.id}"`,
           fields: 'notificationId',
           $autoCancel: false,
-        }),
+        }).catch(() => ({ items: [] })),
       ]);
+
+      const seen = new Set();
+      const all = [...broadcastRes.items, ...directRes.items].filter(n => {
+        if (seen.has(n.id)) return false;
+        seen.add(n.id);
+        return true;
+      });
+
       const readSet = new Set(readsRes.items.map(r => r.notificationId));
-      // Exclude expired and already-read
-      const unread = allRes.items.filter(n => !readSet.has(n.id) && !isNotifExpired(n));
-      setUnreadCount(unread.length);
+      setUnreadCount(all.filter(n => !readSet.has(n.id) && !isNotifExpired(n)).length);
     } catch (err) {
-      console.error('[SR] NotificationContext refreshUnread:', err);
+      console.error('[SR] NotificationContext:', err);
     }
   }, [isParent, currentUser?.id]);
 
-  // Fetch on mount + every 60s
   useEffect(() => {
     refreshUnread();
     const interval = setInterval(refreshUnread, 60000);

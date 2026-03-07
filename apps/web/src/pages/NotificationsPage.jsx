@@ -15,25 +15,34 @@ const NotificationsPage = () => {
 
   const fetchNotifications = useCallback(async () => {
     try {
-      // FIX: use type="Broadcast" OR direct parentId — not the ambiguous parentId=""
-      const [res, readsRes] = await Promise.all([
+      // Two separate fetches — avoids CORS redirect caused by parentId=""
+      const [broadcastRes, directRes, readsRes] = await Promise.all([
         pb.collection('notifications').getList(1, 200, {
-          filter: `type = "Broadcast" || parentId = "${currentUser.id}"`,
+          filter: `type = "Broadcast"`,
           sort: '-created',
           $autoCancel: false,
-        }),
+        }).catch(() => ({ items: [] })),
+        pb.collection('notifications').getList(1, 200, {
+          filter: `parentId = "${currentUser.id}"`,
+          sort: '-created',
+          $autoCancel: false,
+        }).catch(() => ({ items: [] })),
         pb.collection('notification_reads').getList(1, 500, {
           filter: `parentId = "${currentUser.id}"`,
           $autoCancel: false,
-        }),
+        }).catch(() => ({ items: [] })),
       ]);
+
+      // Merge + deduplicate
+      const seen = new Set();
+      const merged = [...broadcastRes.items, ...directRes.items]
+        .filter(n => { if (seen.has(n.id)) return false; seen.add(n.id); return true; })
+        .sort((a, b) => new Date(b.created) - new Date(a.created));
 
       const myReadSet = new Set(readsRes.items.map(r => r.notificationId));
       setReadIds(myReadSet);
-
-      // #8: Filter out expired notifications — new parents won't see old ones
-      const active = res.items.filter(n => !isNotifExpired(n));
-      setNotifications(active);
+      // Filter expired notifications
+      setNotifications(merged.filter(n => !isNotifExpired(n)));
     } catch (error) {
       console.error('[SR] fetchNotifications error:', error);
     } finally {
@@ -136,7 +145,6 @@ const NotificationsPage = () => {
                               {notif.title}
                             </h3>
                             {!read && <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-1" />}
-                            {/* Expiry badge — only show if expiring within 3 days */}
                             {daysLeft !== null && daysLeft <= 3 && daysLeft > 0 && (
                               <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-medium">
                                 ⏳ Expires in {daysLeft}d
