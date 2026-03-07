@@ -2,9 +2,15 @@
  * api/src/routes/claude-proxy.js
  */
 
-import { Router } from 'express';
+import { Router, json as expressJson } from 'express';
 
 const router = Router();
+
+// Route-level JSON body parser — scoped ONLY to POST /chat.
+// NEVER put express.json() globally in main.js: it consumes the request body
+// stream before the PocketBase proxy can forward it, breaking all PB POST
+// endpoints (auth-with-password, payments, etc.) with empty-body 500 errors.
+const parseJson = expressJson({ limit: '50kb' });
 
 const SYSTEM_PROMPT = `You are SafeRide Assistant, a helpful and friendly customer service chatbot for SafeRide — a school transport service in Lake City, Lahore, Pakistan.
 
@@ -52,7 +58,7 @@ setInterval(() => {
   }
 }, 5 * 60_000);
 
-router.post('/chat', async (req, res) => {
+router.post('/chat', parseJson, async (req, res) => {
   const ip = req.ip || req.connection.remoteAddress || 'unknown';
 
   if (!checkRateLimit(ip)) {

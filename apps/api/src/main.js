@@ -6,7 +6,7 @@ import express from 'express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import { config } from 'dotenv';
 import claudeProxy from './routes/claude-proxy.js';
-config();
+config({ path: new URL('../.env', import.meta.url).pathname });
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT      = join(__dirname, '..');
 const PB_BINARY = join(ROOT, 'pocketbase');
@@ -45,13 +45,29 @@ pb.on('close', (code) => {
 setTimeout(() => {
   const app = express();
 
-  // Body parser for our own API routes (must come before routes)
-  app.use(express.json({ limit: '50kb' }));
+  // ── CORS: must be first so ALL responses carry the header, including errors ──
+  // Without this, any Express-level error (body-parse crash, proxy error) would
+  // have no CORS header and the browser reports a misleading CORS error.
+  app.use((req, res, next) => {
+    const allowed = ['https://saferide.com.pk', 'http://localhost:3000', 'http://127.0.0.1:3000'];
+    const origin  = req.headers.origin;
+    if (origin && allowed.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin',  origin);
+      res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
+    if (req.method === 'OPTIONS') { res.sendStatus(204); return; }
+    next();
+  });
 
-  // Claude chatbot proxy — must be registered BEFORE the PocketBase catch-all
+  // ── Claude chatbot router — mounted at /api ─────────────────────────────────
+  // express.json() is applied inside claude-proxy.js at route level, NOT globally.
+  // Global body parsing would consume the stream before the PocketBase proxy
+  // can forward POST bodies (auth-with-password, payments, etc.) → 500 errors.
   app.use('/api', claudeProxy);
 
-  // PocketBase catch-all proxy — handles everything else
+  // ── PocketBase catch-all proxy — handles ALL other requests ─────────────────
   app.use('/', createProxyMiddleware({
     target:      `http://127.0.0.1:${PB_PORT}`,
     changeOrigin: true,
@@ -59,7 +75,7 @@ setTimeout(() => {
     on: {
       error: (err, req, res) => {
         console.error('Proxy error:', err.message);
-        res.status(502).json({ error: 'Backend temporarily unavailable' });
+        if (!res.headersSent) res.status(502).json({ error: 'Backend temporarily unavailable' });
       }
     }
   }));
