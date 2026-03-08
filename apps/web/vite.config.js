@@ -24,4 +24,29 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    // Suppress the warning — our chunks are intentionally split below
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // React core — changes rarely, cached by browser longest
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          // Radix UI / shadcn components
+          'vendor-ui': [
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-dropdown-menu',
+            '@radix-ui/react-tabs',
+            '@radix-ui/react-toast',
+            '@radix-ui/react-label',
+            '@radix-ui/react-radio-group',
+          ],
+          // Icons — lucide is large, isolate it
+          'vendor-icons': ['lucide-react'],
+          // PocketBase SDK
+          'vendor-pb': ['pocketbase'],
+        },
+      },
+    },
+  },
 });
