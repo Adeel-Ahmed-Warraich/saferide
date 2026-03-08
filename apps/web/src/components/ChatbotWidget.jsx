@@ -28,7 +28,7 @@ const KB = [
     answer: "We operate Suzuki Every vans and Changan Karavan vehicles 🚐. Each is GPS-tracked, regularly cleaned, and limited to 7–8 students for comfort and safety." },
 
   { keywords: ['contact', 'phone', 'call', 'whatsapp', 'email', 'reach', 'support', 'help'],
-    answer: "You can reach us:\n📞 Phone / WhatsApp: +92 0301 4202944\n📧 Email: support@saferide.com.pk\n🌐 saferide.com.pk/contact\n\nWe respond within 24 hours on business days." },
+    answer: "You can reach us:\n📞 Phone / WhatsApp: +92 0301 4202944\n📧 Email: infor@saferide.com.pk\n🌐 saferide.com.pk/contact\n\nWe respond within 24 hours on business days." },
 
   // Enrollment
   { keywords: ['enroll', 'register', 'sign up', 'apply', 'join', 'book', 'start', 'how to'],
@@ -133,7 +133,7 @@ function findAnswer(input) {
     return "Hello! 👋 I'm the SafeRide support assistant. I can answer questions about enrollment, fees, van tracking, safety, and more. What would you like to know?";
   }
   if (THANKS.some(t => q.includes(t))) {
-    return "You're welcome! 😊 Is there anything else I can help you with? You can also reach our team at +92 0301 4202944 or support@saferide.com.pk.";
+    return "You're welcome! 😊 Is there anything else I can help you with? You can also reach our team at +92 0301 4202944 or infor@saferide.com.pk.";
   }
 
   // Score each KB entry
@@ -155,7 +155,7 @@ function findAnswer(input) {
 
   if (best && bestScore > 0) return best.answer;
 
-  return "I'm not sure about that 🤔. For this question, please contact our team directly:\n📞 WhatsApp: +92 0301 4202944\n📧 support@saferide.com.pk\n\nOr browse our full FAQ at saferide.com.pk/faq";
+  return "I'm not sure about that 🤔. For this question, please contact our team directly:\n📞 WhatsApp: +92 0301 4202944\n📧 infor@saferide.com.pk\n\nOr browse our full FAQ at saferide.com.pk/faq";
 }
 
 // ─── Message bubble ───────────────────────────────────────────────────────────

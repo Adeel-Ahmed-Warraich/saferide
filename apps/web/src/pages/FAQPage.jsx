@@ -28,7 +28,7 @@ const faqs = [
       },
       {
         q: `How do I contact SafeRide?`,
-        a: `You can reach us via phone or WhatsApp at +92 0301 4202944, by email at support@saferide.com.pk, or through the contact form on our website at saferide.com.pk/contact. We typically respond within 24 hours on business days.`
+        a: `You can reach us via phone or WhatsApp at +92 0301 4202944, by email at infor@saferide.com.pk, or through the contact form on our website at saferide.com.pk/contact. We typically respond within 24 hours on business days.`
       },
     ]
   },

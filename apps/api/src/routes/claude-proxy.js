@@ -22,7 +22,7 @@ Key information about SafeRide:
 - Features: GPS real-time tracking, parent dashboard, push notifications
 - Payments: Easypaisa, JazzCash, Bank Deposit via the parent dashboard
 - Monthly fees vary by distance; parents can check their dashboard
-- Contact: +92 03014202944 | support@saferide.com.pk | WhatsApp: wa.me/9203014202944
+- Contact: +92 03014202944 | infor@saferide.com.pk | WhatsApp: wa.me/9203014202944
 - To enroll: Visit /book or click "Book Now" on the website
 - Parent login: /login | Password reset: /password-reset
 
