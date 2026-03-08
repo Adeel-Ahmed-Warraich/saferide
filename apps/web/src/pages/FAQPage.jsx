@@ -28,7 +28,7 @@ const faqs = [
       },
       {
         q: `How do I contact SafeRide?`,
-        a: `You can reach us via phone or WhatsApp at +92 300 XXXXXXX, by email at support@saferide.com.pk, or through the contact form on our website at saferide.com.pk/contact. We typically respond within 24 hours on business days.`
+        a: `You can reach us via phone or WhatsApp at +92 0301 4202944, by email at support@saferide.com.pk, or through the contact form on our website at saferide.com.pk/contact. We typically respond within 24 hours on business days.`
       },
     ]
   },
@@ -117,7 +117,7 @@ const faqs = [
       },
       {
         q: `What do I do if my child misses the van?`,
-        a: `Contact the driver or call our team immediately at +92 300 XXXXXXX. Do not let your child wait alone. Our team will advise on the best course of action depending on the situation.`
+        a: `Contact the driver or call our team immediately at +92 0301 4202944. Do not let your child wait alone. Our team will advise on the best course of action depending on the situation.`
       },
     ]
   },

@@ -9,6 +9,6 @@
 //
 // To update contact details: edit the SAFERIDE object in EACH hook file,
 // or use Find & Replace in VS Code:
-//   Ctrl+Shift+H → search "+92 300 XXXXXXX" → replace with real number
+//   Ctrl+Shift+H → search "+92 0301 4202944" → replace with real number
 //   Check "Search in all files" checkbox
 // ─────────────────────────────────────────────────────────────────────────────

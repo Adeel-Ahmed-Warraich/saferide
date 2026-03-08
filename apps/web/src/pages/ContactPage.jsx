@@ -79,7 +79,7 @@ const ContactPage = () => {
                       <div>
                         <h3 className="font-semibold text-gray-900 text-sm mb-0.5">Phone</h3>
                         <a href="tel:+9203014202944" className="text-gray-600 text-sm hover:text-blue-600 transition-colors">
-                          +92 300 XXXXXXX
+                          +92 0301 4202944
                         </a>
                       </div>
                     </div>

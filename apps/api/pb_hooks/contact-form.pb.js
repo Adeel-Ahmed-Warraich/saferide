@@ -3,7 +3,7 @@
 onRecordAfterCreateSuccess((e) => {
 
   function cfg() {
-    return { name: "SafeRide School Transport", phone: "+92 300 XXXXXXX", email: "support@saferide.com.pk", website: "https://saferide.com.pk", address: "Lake City, Lahore, Pakistan", adminEmail: "support@saferide.com.pk" };
+    return { name: "SafeRide School Transport", phone: "+92 0301 4202944", email: "support@saferide.com.pk", website: "https://saferide.com.pk", address: "Lake City, Lahore, Pakistan", adminEmail: "support@saferide.com.pk" };
   }
   function hdr(title, sub) {
     var s = sub ? '<p style="color:#bfdbfe;margin:6px 0 0;font-size:14px;">' + sub + '</p>' : "";

@@ -5,7 +5,7 @@ onRecordAfterCreateSuccess((e) => {
   function cfg() {
     return {
       name:       "SafeRide School Transport",
-      phone:      "+92 300 XXXXXXX",
+      phone:      "+92 0301 4202944",
       whatsapp:   "9203014202944",
       email:      "support@saferide.com.pk",
       website:    "https://saferide.com.pk",

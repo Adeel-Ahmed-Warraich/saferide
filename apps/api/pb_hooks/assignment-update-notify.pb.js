@@ -74,7 +74,7 @@ function buildAssignEmail(parentId, vanId, childLabel, shift, monthlyFee, isUpda
     + '<a href="https://saferide.com.pk/login" style="background:' + btnBg + ';color:#fff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;">View Dashboard →</a>'
     + '</div>'
     + '<div style="background:#dbeafe;border-left:4px solid #1e40af;padding:12px 16px;border-radius:0 8px 8px 0;">'
-    + '<p style="margin:0;color:#1e40af;font-size:14px;line-height:1.8;">📞 <strong>+92 300 XXXXXXX</strong><br/>📧 <strong>support@saferide.com.pk</strong></p>'
+    + '<p style="margin:0;color:#1e40af;font-size:14px;line-height:1.8;">📞 <strong>+92 0301 4202944</strong><br/>📧 <strong>support@saferide.com.pk</strong></p>'
     + '</div>'
     + '</div>'
     + '<div style="background:#f8fafc;padding:12px;text-align:center;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 10px 10px;">'

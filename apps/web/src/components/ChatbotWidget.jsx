@@ -19,7 +19,7 @@ const KB = [
     answer: "SafeRide is a professional school transport service based in Lake City, Lahore 🚐. We provide safe, GPS-tracked van service for school children with police-verified drivers and a dedicated parent portal." },
 
   { keywords: ['area', 'areas', 'location', 'serve', 'coverage', 'nearby', 'where', 'zone'],
-    answer: "We currently serve Lake City and nearby schools within approximately 4 km of the area. Not sure if you're covered? Contact us at +92 300 XXXXXXX and we'll confirm!" },
+    answer: "We currently serve Lake City and nearby schools within approximately 4 km of the area. Not sure if you're covered? Contact us at +92 0301 4202944 and we'll confirm!" },
 
   { keywords: ['hours', 'time', 'shift', 'morning', 'afternoon', 'timing', 'schedule', 'when'],
     answer: "We run two shifts:\n• 🌅 Morning: 7:00 AM – 8:30 AM (school drop-off)\n• 🌆 Afternoon: 2:00 PM – 4:00 PM (school pick-up)\nYou can choose one or both shifts." },
@@ -28,7 +28,7 @@ const KB = [
     answer: "We operate Suzuki Every vans and Changan Karavan vehicles 🚐. Each is GPS-tracked, regularly cleaned, and limited to 7–8 students for comfort and safety." },
 
   { keywords: ['contact', 'phone', 'call', 'whatsapp', 'email', 'reach', 'support', 'help'],
-    answer: "You can reach us:\n📞 Phone / WhatsApp: +92 300 XXXXXXX\n📧 Email: support@saferide.com.pk\n🌐 saferide.com.pk/contact\n\nWe respond within 24 hours on business days." },
+    answer: "You can reach us:\n📞 Phone / WhatsApp: +92 0301 4202944\n📧 Email: support@saferide.com.pk\n🌐 saferide.com.pk/contact\n\nWe respond within 24 hours on business days." },
 
   // Enrollment
   { keywords: ['enroll', 'register', 'sign up', 'apply', 'join', 'book', 'start', 'how to'],
@@ -73,13 +73,13 @@ const KB = [
     answer: "Van tracking is active during service hours:\n🌅 Morning: 7:00 AM – 8:30 AM\n🌆 Afternoon: 2:00 PM – 4:00 PM\nOutside these times the van is off duty." },
 
   { keywords: ['late', 'delay', 'van late', 'not arrived', 'running late'],
-    answer: "You'll receive a notification for significant delays 🔔. Check the live map in your parent portal for the current location. For urgent matters, WhatsApp us at +92 300 XXXXXXX." },
+    answer: "You'll receive a notification for significant delays 🔔. Check the live map in your parent portal for the current location. For urgent matters, WhatsApp us at +92 0301 4202944." },
 
   { keywords: ['nearby', 'approaching', 'notification', 'alert', 'coming'],
     answer: "Yes! The system sends a notification when your child's van is approaching your stop 🔔. Make sure notifications are enabled in your parent portal settings." },
 
   { keywords: ['missed', 'miss the van', 'missed the van', 'left behind'],
-    answer: "If your child misses the van, contact the driver or call us immediately at +92 300 XXXXXXX 📞. Don't let your child wait alone — our team will advise on the best course of action." },
+    answer: "If your child misses the van, contact the driver or call us immediately at +92 0301 4202944 📞. Don't let your child wait alone — our team will advise on the best course of action." },
 
   // Safety
   { keywords: ['driver', 'drivers', 'police', 'verified', 'background', 'trained', 'safe', 'vetting'],
@@ -133,7 +133,7 @@ function findAnswer(input) {
     return "Hello! 👋 I'm the SafeRide support assistant. I can answer questions about enrollment, fees, van tracking, safety, and more. What would you like to know?";
   }
   if (THANKS.some(t => q.includes(t))) {
-    return "You're welcome! 😊 Is there anything else I can help you with? You can also reach our team at +92 300 XXXXXXX or support@saferide.com.pk.";
+    return "You're welcome! 😊 Is there anything else I can help you with? You can also reach our team at +92 0301 4202944 or support@saferide.com.pk.";
   }
 
   // Score each KB entry
@@ -155,7 +155,7 @@ function findAnswer(input) {
 
   if (best && bestScore > 0) return best.answer;
 
-  return "I'm not sure about that 🤔. For this question, please contact our team directly:\n📞 WhatsApp: +92 300 XXXXXXX\n📧 support@saferide.com.pk\n\nOr browse our full FAQ at saferide.com.pk/faq";
+  return "I'm not sure about that 🤔. For this question, please contact our team directly:\n📞 WhatsApp: +92 0301 4202944\n📧 support@saferide.com.pk\n\nOr browse our full FAQ at saferide.com.pk/faq";
 }
 
 // ─── Message bubble ───────────────────────────────────────────────────────────

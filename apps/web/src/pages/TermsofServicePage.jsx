@@ -230,7 +230,7 @@ const TermsOfServicePage = () => {
                 <p><strong className="text-gray-800">SafeRide School Transport</strong></p>
                 <p>📍 Lake City, Lahore, Punjab, Pakistan</p>
                 <p>📧 <a href="mailto:info@saferide.com.pk" className="text-blue-600 hover:underline">info@saferide.com.pk</a></p>
-                <p>📞 <a href="tel:+923001234567" className="text-blue-600 hover:underline">+92 300 XXXXXXX</a></p>
+                <p>📞 <a href="tel:+9203014202944" className="text-blue-600 hover:underline">+92 0301 4202944</a></p>
                 <p>🌐 <a href="https://saferide.com.pk" className="text-blue-600 hover:underline">saferide.com.pk</a></p>
               </div>
             </Section>
