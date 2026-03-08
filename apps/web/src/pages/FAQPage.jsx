@@ -347,7 +347,7 @@ const FAQPage = () => {
               Send a Message
             </a>
             <a
-              href="https://wa.me/923001234567"
+              href="https://wa.me/9203014202944"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 bg-white border border-gray-200 text-gray-700 px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors"

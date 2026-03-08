@@ -278,7 +278,7 @@ const ParentDashboard = () => {
               <div>
                 <h3 className="text-red-800 font-bold text-sm">Account Suspended</h3>
                 <p className="text-red-700 text-xs mt-0.5">Your transport service has been suspended. Please contact SafeRide to resolve.</p>
-                <a href="https://wa.me/923001234567" target="_blank" rel="noopener noreferrer"
+                <a href="https://wa.me/9203014202944" target="_blank" rel="noopener noreferrer"
                   className="text-xs font-semibold text-red-700 hover:text-red-900 underline mt-1 inline-block">
                   WhatsApp us →
                 </a>

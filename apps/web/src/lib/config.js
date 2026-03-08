@@ -10,8 +10,8 @@
 
 export const SAFERIDE = {
   name:        'SafeRide School Transport',
-  phone:       '+92 300 1234567',
-  whatsapp:    '923001234567',
+  phone:       '+92 03014202944',
+  whatsapp:    '9203014202944',
   email:       'support@saferide.com.pk',
   website:     'https://saferide.com.pk',
   address:     'Lake City, Lahore, Pakistan',

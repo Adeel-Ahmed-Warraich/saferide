@@ -196,7 +196,7 @@ const ParentModal = ({ parent, onClose, onSave }) => {
           </div>
           <div>
             <Label>Phone Number</Label>
-            <Input name="phoneNumber" value={form.phoneNumber} onChange={handle} placeholder="+92 300 1234567" className="mt-1" />
+            <Input name="phoneNumber" value={form.phoneNumber} onChange={handle} placeholder="+92 03014202944" className="mt-1" />
           </div>
           <div>
             <Label>Enrollment Status</Label>

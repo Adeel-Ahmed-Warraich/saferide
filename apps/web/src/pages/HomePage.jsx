@@ -106,7 +106,7 @@ const HomePage = () => {
                       <h3 className="text-xl font-semibold mb-2 flex items-center gap-2">
                         <Phone className="w-5 h-5 text-yellow-400" /> Contact Us
                       </h3>
-                      <p className="text-blue-100 ml-7">+92 300 1234567</p>
+                      <p className="text-blue-100 ml-7">+92 03014202944</p>
                       <p className="text-blue-100 ml-7 flex items-center gap-2 mt-1">
                         <Mail className="w-4 h-4" /> info@saferide.com.pk
                       </p>

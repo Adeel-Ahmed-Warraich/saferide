@@ -22,14 +22,14 @@ Key information about SafeRide:
 - Features: GPS real-time tracking, parent dashboard, push notifications
 - Payments: Easypaisa, JazzCash, Bank Deposit via the parent dashboard
 - Monthly fees vary by distance; parents can check their dashboard
-- Contact: +92 300 1234567 | support@saferide.com.pk | WhatsApp: wa.me/923001234567
+- Contact: +92 03014202944 | support@saferide.com.pk | WhatsApp: wa.me/9203014202944
 - To enroll: Visit /book or click "Book Now" on the website
 - Parent login: /login | Password reset: /password-reset
 
 Guidelines:
 - Be warm, concise, and professional
 - Answer only what is relevant to SafeRide services
-- For emergencies, always provide the phone number: +92 300 1234567
+- For emergencies, always provide the phone number: +92 03014202944
 - If you cannot answer, suggest calling or WhatsApp
 - Keep replies short (2-4 sentences max)
 - Respond in English; if user writes in Urdu, respond in Urdu`;
@@ -105,7 +105,7 @@ router.post('/chat', parseJson, async (req, res) => {
       const errBody = await upstream.text();
       console.error('[claude-proxy] Anthropic error:', upstream.status, errBody);
       return res.status(upstream.status).json({
-        error: 'AI service temporarily unavailable. Please call +92 300 1234567.',
+        error: 'AI service temporarily unavailable. Please call +92 03014202944.',
       });
     }
 
@@ -116,7 +116,7 @@ router.post('/chat', parseJson, async (req, res) => {
   } catch (err) {
     console.error('[claude-proxy] Fetch error:', err.message);
     return res.status(502).json({
-      error: 'Could not reach AI service. Please call +92 300 1234567.',
+      error: 'Could not reach AI service. Please call +92 03014202944.',
     });
   }
 });

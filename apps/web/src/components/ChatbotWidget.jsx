@@ -303,7 +303,7 @@ const ChatbotWidget = () => {
 
       {/* WhatsApp shortcut */}
       <div className="bg-white border-t border-gray-100 px-3 py-2 flex-shrink-0">
-        <a href="https://wa.me/923001234567" target="_blank" rel="noopener noreferrer"
+        <a href="https://wa.me/9203014202944" target="_blank" rel="noopener noreferrer"
           className="flex items-center gap-2 text-xs text-gray-500 hover:text-green-600 transition-colors w-fit">
           <Phone className="w-3 h-3" />
           Speak to a human on WhatsApp

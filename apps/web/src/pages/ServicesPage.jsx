@@ -136,7 +136,7 @@ const ServicesPage = () => {
                   Book Now — It's Free to Enroll
                 </Button>
               </Link>
-              <a href="https://wa.me/923001234567" target="_blank" rel="noopener noreferrer">
+              <a href="https://wa.me/9203014202944" target="_blank" rel="noopener noreferrer">
                 <Button className="bg-white text-blue-700 hover:bg-blue-50 font-bold px-8 py-3 text-base shadow-lg">
                   WhatsApp Us
                 </Button>
@@ -241,7 +241,7 @@ const ServicesPage = () => {
                   Enroll Now
                 </Button>
               </Link>
-              <a href="https://wa.me/923001234567" target="_blank" rel="noopener noreferrer">
+              <a href="https://wa.me/9203014202944" target="_blank" rel="noopener noreferrer">
                 <Button className="bg-white text-blue-700 hover:bg-blue-50 font-bold px-8 py-3">
                   Ask About Combined Rate
                 </Button>

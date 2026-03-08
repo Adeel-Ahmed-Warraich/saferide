@@ -78,7 +78,7 @@ const ContactPage = () => {
                       </div>
                       <div>
                         <h3 className="font-semibold text-gray-900 text-sm mb-0.5">Phone</h3>
-                        <a href="tel:+923001234567" className="text-gray-600 text-sm hover:text-blue-600 transition-colors">
+                        <a href="tel:+9203014202944" className="text-gray-600 text-sm hover:text-blue-600 transition-colors">
                           +92 300 XXXXXXX
                         </a>
                       </div>
@@ -119,7 +119,7 @@ const ContactPage = () => {
                     </div>
 
                     <a
-                      href="https://wa.me/923001234567"
+                      href="https://wa.me/9203014202944"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="block pt-1"
@@ -199,7 +199,7 @@ const ContactPage = () => {
                       id="phone"
                       name="phone"
                       type="tel"
-                      placeholder="e.g. 0300 1234567"
+                      placeholder="e.g. 003014202944"
                       value={formData.phone}
                       onChange={handleChange}
                       className="mt-1.5"

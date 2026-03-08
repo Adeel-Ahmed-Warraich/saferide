@@ -175,7 +175,7 @@ const BookingPage = () => {
                     </div>
                     <div>
                       <Label htmlFor="contactNumber">Contact Number *</Label>
-                      <Input id="contactNumber" name="contactNumber" type="tel" required value={formData.contactNumber} onChange={handleChange} placeholder="+92 300 1234567" className="mt-1.5" />
+                      <Input id="contactNumber" name="contactNumber" type="tel" required value={formData.contactNumber} onChange={handleChange} placeholder="+92 03014202944" className="mt-1.5" />
                     </div>
                     <div>
                       <Label htmlFor="email">Email Address *</Label>
