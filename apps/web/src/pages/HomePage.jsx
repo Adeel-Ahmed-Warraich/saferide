@@ -18,16 +18,16 @@ const HomePage = () => {
         <section className="relative pt-20 pb-32 lg:pt-32 lg:pb-40 overflow-hidden">
           <div className="absolute inset-0 z-0">
             <img 
-              src="https://images.unsplash.com/photo-1584515605121-c6a60de125c2" 
+              src="/parent_holding_a_smartphone_showing_live_GPS_track-0.jpg" 
               alt="School Transport Van" 
-              className="w-full h-full object-cover opacity-20"
+              className="w-full h-full object-cover opacity-90"
             />
             <div className="absolute inset-0 bg-gradient-to-r from-blue-900/90 to-blue-800/80 mix-blend-multiply"></div>
           </div>
           
           <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <div className="inline-block mb-6 px-4 py-1.5 rounded-full bg-yellow-400/20 border border-yellow-400/50 backdrop-blur-sm">
-              <span className="text-yellow-300 font-semibold tracking-wide text-sm uppercase">Now Enrolling for 2026</span>
+              <span className="text-yellow-300 font-semibold tracking-wide text-sm uppercase">Now Enrolling for {new Date().getFullYear()}</span>
             </div>
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-white mb-6 tracking-tight drop-shadow-lg">
               Safe, Reliable <br className="hidden md:block" />
@@ -106,7 +106,7 @@ const HomePage = () => {
                       <h3 className="text-xl font-semibold mb-2 flex items-center gap-2">
                         <Phone className="w-5 h-5 text-yellow-400" /> Contact Us
                       </h3>
-                      <p className="text-blue-100 ml-7">+92 300 1234567</p>
+                      <p className="text-blue-100 ml-7">+92 03014202944</p>
                       <p className="text-blue-100 ml-7 flex items-center gap-2 mt-1">
                         <Mail className="w-4 h-4" /> info@saferide.com.pk
                       </p>

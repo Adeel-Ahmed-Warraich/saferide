@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, LogOut, ChevronDown } from 'lucide-react';
+import { Menu, X, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
+import { useNotifications } from '@/contexts/NotificationContext.jsx';
 import { Button } from '@/components/ui/button.jsx';
 
 const Header = () => {
@@ -10,6 +11,7 @@ const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, isAdmin, isParent, logout, currentUser } = useAuth();
+  const { unreadCount } = useNotifications();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -17,7 +19,6 @@ const Header = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Close mobile menu on route change
   useEffect(() => { setMobileMenuOpen(false); }, [location.pathname]);
 
   const isActive = (path) => location.pathname === path;
@@ -29,24 +30,22 @@ const Header = () => {
   };
 
   const publicLinks = [
-    { name: 'Home', path: '/' },
+    { name: 'Home',     path: '/' },
     { name: 'About Us', path: '/about' },
     { name: 'Services', path: '/services' },
-    { name: 'Contact', path: '/contact' },
+    { name: 'Contact',  path: '/contact' },
   ];
 
   const parentDashLinks = [
-    { name: 'Dashboard', path: '/dashboard' },
-    { name: 'Track Van', path: '/van-tracking' },
-    { name: 'Payments', path: '/payments' },
-    { name: 'Notifications', path: '/notifications' },
+    { name: 'Dashboard',      path: '/dashboard' },
+    { name: 'Track Van',      path: '/van-tracking' },
+    { name: 'Payments',       path: '/payments' },
+    { name: 'Notifications',  path: '/notifications', badge: unreadCount },
   ];
 
   const linkClass = (path) =>
     `relative font-medium transition-colors text-sm ${
-      isActive(path)
-        ? 'text-[#1E40AF]'
-        : 'text-gray-600 hover:text-[#1E40AF]'
+      isActive(path) ? 'text-[#1E40AF]' : 'text-gray-600 hover:text-[#1E40AF]'
     }`;
 
   const mobileLinkClass = (path) =>
@@ -60,6 +59,7 @@ const Header = () => {
     <header className={`sticky top-0 z-40 bg-white transition-shadow duration-300 ${scrolled ? 'shadow-md' : 'shadow-sm border-b border-gray-100'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16 md:h-20">
+
           {/* Logo */}
           <Link to="/" className="flex items-center group">
             <img
@@ -71,7 +71,7 @@ const Header = () => {
               <div className="text-lg font-extrabold text-[#1E40AF] leading-tight tracking-tight">
                 Safe<span className="text-[#FBBF24]">Ride</span>
               </div>
-              <div className="text-xs text-gray-500 font-medium -mt-0.5">School Transport</div>              
+              <div className="text-xs text-gray-500 font-medium -mt-0.5">School Transport</div>
               <div className="text-xs text-gray-500 font-medium -mt-0.5 italic">Your Child's Safety, Our Priority</div>
             </div>
           </Link>
@@ -108,8 +108,13 @@ const Header = () => {
             {isAuthenticated && isParent && (
               <div className="flex items-center gap-1 ml-3 pl-3 border-l border-gray-200">
                 {parentDashLinks.map(l => (
-                  <Link key={l.path} to={l.path} className={`${linkClass(l.path)} px-3 py-2 rounded-lg hover:bg-gray-50`}>
+                  <Link key={l.path} to={l.path} className={`${linkClass(l.path)} px-3 py-2 rounded-lg hover:bg-gray-50 relative`}>
                     {l.name}
+                    {l.badge > 0 && (
+                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold leading-none">
+                        {l.badge > 9 ? '9+' : l.badge}
+                      </span>
+                    )}
                   </Link>
                 ))}
                 <Button onClick={handleLogout} variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50 ml-1">
@@ -166,7 +171,14 @@ const Header = () => {
                 {isAuthenticated && isParent && (
                   <>
                     {parentDashLinks.map(l => (
-                      <Link key={l.path} to={l.path} className={mobileLinkClass(l.path)}>{l.name}</Link>
+                      <Link key={l.path} to={l.path} className={`${mobileLinkClass(l.path)} relative`}>
+                        {l.name}
+                        {l.badge > 0 && (
+                          <span className="absolute top-2 right-3 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                            {l.badge > 9 ? '9+' : l.badge}
+                          </span>
+                        )}
+                      </Link>
                     ))}
                     <button onClick={handleLogout} className="flex items-center py-3 px-3 text-red-600 font-medium w-full text-left hover:bg-red-50 rounded-lg text-sm">
                       <LogOut className="w-4 h-4 mr-2" /> Logout

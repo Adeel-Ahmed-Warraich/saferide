@@ -1,36 +1,48 @@
-import React, { useState, useEffect } from 'react';
+/**
+ * saferide/web/src/pages/VanTrackingPage.jsx
+ *
+ * FIXES applied:
+ *  #5  fetchTrackingData wrapped in useCallback — fixes stale closure and
+ *      React strict-mode missing-dependency warning.
+ *  #S  Centralised SAFERIDE config for phone number.
+ *  #A  Van Assignment info shown from assignments record if available.
+ */
+
+import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet';
 import pb from '@/lib/pocketbaseClient.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { MapPin, Navigation, RefreshCw, Clock, Phone, Truck, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { SAFERIDE } from '@/lib/config.js';
+import { MapPin, Navigation, RefreshCw, Clock, Phone, Truck, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 
 const LAKE_CITY_EMBED = `https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d13598.7!2d74.3048!3d31.5546!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x391904359a1bf6b5%3A0xa22a85a74a23e257!2sLake+City%2C+Lahore!5e0!3m2!1sen!2spk!4v1234567890123!5m2!1sen!2spk`;
 
 const STATUS_CONFIG = {
-  'On the way': { color: 'bg-blue-100 text-blue-800 border-blue-200', dot: 'bg-blue-500', label: 'On the Way 🚐' },
-  'Arrived': { color: 'bg-green-100 text-green-800 border-green-200', dot: 'bg-green-500', label: 'Arrived ✓' },
-  'Delayed': { color: 'bg-orange-100 text-orange-800 border-orange-200', dot: 'bg-orange-500', label: 'Delayed ⚠️' },
-  'Completed': { color: 'bg-gray-100 text-gray-700 border-gray-200', dot: 'bg-gray-400', label: 'Trip Completed' },
+  'On the way':  { color: 'bg-blue-100 text-blue-800 border-blue-200',   dot: 'bg-blue-500',   label: 'On the Way 🚐' },
+  'Arrived':     { color: 'bg-green-100 text-green-800 border-green-200', dot: 'bg-green-500',  label: 'Arrived ✓' },
+  'Delayed':     { color: 'bg-orange-100 text-orange-800 border-orange-200', dot: 'bg-orange-500', label: 'Delayed ⚠️' },
+  'Completed':   { color: 'bg-gray-100 text-gray-700 border-gray-200',   dot: 'bg-gray-400',   label: 'Trip Completed' },
 };
 
 const VanTrackingPage = () => {
   const { currentUser } = useAuth();
-  const [assignment, setAssignment] = useState(null);
-  const [van, setVan] = useState(null);
-  const [gpsLocation, setGpsLocation] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState(null);
+  const [assignment,   setAssignment]   = useState(null);
+  const [van,          setVan]          = useState(null);
+  const [gpsLocation,  setGpsLocation]  = useState(null);
+  const [loading,      setLoading]      = useState(true);
+  const [refreshing,   setRefreshing]   = useState(false);
+  const [lastUpdated,  setLastUpdated]  = useState(null);
 
-  const fetchTrackingData = async (silent = false) => {
+  // FIX #5 — useCallback so the effect dependency array is stable and the
+  // interval captures the latest version of the function.
+  const fetchTrackingData = useCallback(async (silent = false) => {
     if (!silent) setRefreshing(true);
     try {
-      // Get parent's active assignment
       const assignments = await pb.collection('assignments').getList(1, 1, {
-        filter: `parentId="${currentUser.id}" && status="Active"`,
-        expand: 'vanId',
-        $autoCancel: false
+        filter:  `parentId="${currentUser.id}" && status="Active"`,
+        expand:  'vanId',
+        $autoCancel: false,
       });
 
       if (assignments.items.length > 0) {
@@ -38,34 +50,32 @@ const VanTrackingPage = () => {
         setAssignment(curr);
         setVan(curr.expand?.vanId);
 
-        // Try to get live GPS location for this van
         if (curr.expand?.vanId?.id) {
           try {
             const gps = await pb.collection('gpsLocations').getList(1, 1, {
               filter: `vanId="${curr.expand.vanId.id}"`,
-              sort: '-created',
-              $autoCancel: false
+              sort:   '-created',
+              $autoCancel: false,
             });
             if (gps.items.length > 0) setGpsLocation(gps.items[0]);
-          } catch (_) { /* GPS collection may not have data yet */ }
+          } catch (_) { /* GPS data may not exist yet */ }
         }
       }
       setLastUpdated(new Date());
     } catch (error) {
-      console.error(error);
+      console.error('[VanTracking]', error);
     } finally {
       setLoading(false);
-      setTimeout(() => setRefreshing(false), 600);
+      if (!silent) setTimeout(() => setRefreshing(false), 600);
     }
-  };
+  }, [currentUser.id]); // stable — only rebuilds if user changes
 
   useEffect(() => {
     fetchTrackingData();
-    const interval = setInterval(() => fetchTrackingData(true), 30000);
+    const interval = setInterval(() => fetchTrackingData(true), 30_000);
     return () => clearInterval(interval);
-  }, [currentUser.id]);
+  }, [fetchTrackingData]); // correct dep — no stale closure
 
-  // Build map embed URL — use real GPS coords if available, else show Lake City
   const mapSrc = gpsLocation?.latitude && gpsLocation?.longitude
     ? `https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d500!2d${gpsLocation.longitude}!3d${gpsLocation.latitude}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sen!2spk!4v${Date.now()}`
     : LAKE_CITY_EMBED;
@@ -90,7 +100,13 @@ const VanTrackingPage = () => {
                   Updated {lastUpdated.toLocaleTimeString()}
                 </span>
               )}
-              <Button variant="outline" size="sm" onClick={() => fetchTrackingData()} disabled={refreshing} className="bg-white border-gray-200">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fetchTrackingData()}
+                disabled={refreshing}
+                className="bg-white border-gray-200"
+              >
                 <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
               </Button>
             </div>
@@ -99,7 +115,7 @@ const VanTrackingPage = () => {
           {loading ? (
             <div className="flex items-center justify-center min-h-[400px]">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-800 mx-auto mb-4"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-800 mx-auto mb-4" />
                 <p className="text-gray-500 text-sm">Loading tracking data...</p>
               </div>
             </div>
@@ -109,8 +125,13 @@ const VanTrackingPage = () => {
                 <MapPin className="w-10 h-10 text-gray-300" />
               </div>
               <h2 className="text-xl font-bold text-gray-700 mb-2">No Active Assignment</h2>
-              <p className="text-gray-500 max-w-sm mx-auto">Your child has not been assigned to a van yet. Please contact SafeRide administration.</p>
-              <a href="tel:+923001234567" className="inline-flex items-center gap-2 mt-6 px-5 py-2.5 bg-blue-800 text-white rounded-xl font-medium hover:bg-blue-900 transition-colors">
+              <p className="text-gray-500 max-w-sm mx-auto">
+                Your child has not been assigned to a van yet. Please contact SafeRide administration.
+              </p>
+              <a
+                href={`tel:${SAFERIDE.phone}`}
+                className="inline-flex items-center gap-2 mt-6 px-5 py-2.5 bg-blue-800 text-white rounded-xl font-medium hover:bg-blue-900 transition-colors"
+              >
                 <Phone className="w-4 h-4" /> Call Admin
               </a>
             </div>
@@ -125,7 +146,7 @@ const VanTrackingPage = () => {
                     {gpsLocation ? 'Live GPS Feed' : 'Service Area Map'}
                   </span>
                   <span className="flex items-center gap-1.5 text-blue-200 text-xs">
-                    <span className={`w-2 h-2 rounded-full ${gpsLocation ? 'bg-green-400 animate-pulse' : 'bg-yellow-400'}`}></span>
+                    <span className={`w-2 h-2 rounded-full ${gpsLocation ? 'bg-green-400 animate-pulse' : 'bg-yellow-400'}`} />
                     {gpsLocation ? 'GPS Active' : 'Estimated Location'}
                   </span>
                 </div>
@@ -145,10 +166,11 @@ const VanTrackingPage = () => {
 
               {/* Info Panel */}
               <div className="space-y-4">
-                {/* Van Status Card */}
+
+                {/* Van Status */}
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                   <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border mb-4 ${statusCfg.color}`}>
-                    <span className={`w-2 h-2 rounded-full ${statusCfg.dot} animate-pulse`}></span>
+                    <span className={`w-2 h-2 rounded-full ${statusCfg.dot} animate-pulse`} />
                     {statusCfg.label}
                   </div>
 
@@ -193,20 +215,23 @@ const VanTrackingPage = () => {
                   <h3 className="font-semibold text-gray-800 mb-4 text-sm">Today's Journey</h3>
                   <div className="space-y-3">
                     {[
-                      { label: 'Departed School', done: true, time: assignment.departureTime || '2:05 PM' },
-                      { label: 'En Route', done: vanStatus !== 'Completed', active: vanStatus === 'On the way', time: '' },
-                      { label: 'Arrival Home', done: vanStatus === 'Arrived' || vanStatus === 'Completed', time: '' },
+                      { label: 'Departed School', done: true,                                         time: assignment.departureTime || '2:05 PM' },
+                      { label: 'En Route',         done: vanStatus !== 'Completed', active: vanStatus === 'On the way', time: '' },
+                      { label: 'Arrival Home',     done: vanStatus === 'Arrived' || vanStatus === 'Completed', time: '' },
                     ].map((step, i) => (
                       <div key={i} className="flex items-center gap-3">
                         <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
                           step.done ? 'bg-green-500' : step.active ? 'bg-blue-500 animate-pulse' : 'bg-gray-200'
                         }`}>
-                          {step.done ? <CheckCircle2 className="w-4 h-4 text-white" /> : (
-                            <div className="w-2 h-2 bg-white rounded-full"></div>
-                          )}
+                          {step.done
+                            ? <CheckCircle2 className="w-4 h-4 text-white" />
+                            : <div className="w-2 h-2 bg-white rounded-full" />
+                          }
                         </div>
                         <div className="flex-1">
-                          <span className={`text-sm font-medium ${step.done ? 'text-gray-800' : 'text-gray-400'}`}>{step.label}</span>
+                          <span className={`text-sm font-medium ${step.done ? 'text-gray-800' : 'text-gray-400'}`}>
+                            {step.label}
+                          </span>
                           {step.time && <span className="text-xs text-gray-400 ml-2">{step.time}</span>}
                         </div>
                       </div>
@@ -214,21 +239,30 @@ const VanTrackingPage = () => {
                   </div>
                 </div>
 
-                {/* Call Driver */}
+                {/* Contact */}
                 <div className="bg-yellow-50 p-5 rounded-2xl border border-yellow-100">
                   <h3 className="font-bold text-yellow-800 mb-1 text-sm">Need Help?</h3>
-                  <p className="text-xs text-yellow-700 mb-3">Contact the driver or SafeRide admin for any urgent concerns.</p>
+                  <p className="text-xs text-yellow-700 mb-3">
+                    Contact the driver or SafeRide admin for any urgent concerns.
+                  </p>
                   <div className="flex flex-col gap-2">
-                    {van?.driverPhone ? (
-                      <a href={`tel:${van.driverPhone}`} className="flex items-center justify-center gap-2 w-full bg-yellow-400 hover:bg-yellow-500 text-blue-900 font-bold py-2.5 rounded-xl text-sm transition-colors">
+                    {van?.driverPhone && (
+                      <a
+                        href={`tel:${van.driverPhone}`}
+                        className="flex items-center justify-center gap-2 w-full bg-yellow-400 hover:bg-yellow-500 text-blue-900 font-bold py-2.5 rounded-xl text-sm transition-colors"
+                      >
                         <Phone className="w-4 h-4" /> Call Driver
                       </a>
-                    ) : null}
-                    <a href="tel:+923001234567" className="flex items-center justify-center gap-2 w-full bg-white hover:bg-gray-50 text-gray-800 font-medium py-2.5 rounded-xl text-sm border border-gray-200 transition-colors">
-                      <Phone className="w-4 h-4" /> Call SafeRide: +92 300 1234567
+                    )}
+                    <a
+                      href={`tel:${SAFERIDE.phone}`}
+                      className="flex items-center justify-center gap-2 w-full bg-white hover:bg-gray-50 text-gray-800 font-medium py-2.5 rounded-xl text-sm border border-gray-200 transition-colors"
+                    >
+                      <Phone className="w-4 h-4" /> Call SafeRide: {SAFERIDE.phone}
                     </a>
                   </div>
                 </div>
+
               </div>
             </div>
           )}
